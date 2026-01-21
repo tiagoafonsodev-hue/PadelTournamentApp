@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gradlew.bat assembleDebug:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd //c taskkill //PID 23192 //F)",
+      "Bash(timeout 3 cmd:*)",
+      "Bash(exit 0)",
+      "Bash(xargs:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(ping:*)",
+      "Bash(del:*)",
+      "Bash(git config:*)",
+      "Bash(git remote add:*)"
+    ]
+  }
+}

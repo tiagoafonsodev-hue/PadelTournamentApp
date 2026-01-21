@@ -1,0 +1,204 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  name         String
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  players      Player[]
+  tournaments  Tournament[]
+
+  @@map("users")
+}
+
+model Player {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  name        String
+  email       String?
+  phoneNumber String?   @map("phone_number")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stats       PlayerStats?
+  tournaments TournamentPlayer[]
+  tournamentResults TournamentResult[]
+  matchesAsPlayer1 Match[] @relation("MatchPlayer1")
+  matchesAsPlayer2 Match[] @relation("MatchPlayer2")
+  matchesAsPlayer3 Match[] @relation("MatchPlayer3")
+  matchesAsPlayer4 Match[] @relation("MatchPlayer4")
+
+  @@index([userId])
+  @@map("players")
+}
+
+model PlayerStats {
+  id                   String   @id @default(uuid())
+  playerId             String   @unique @map("player_id")
+  totalMatches         Int      @default(0) @map("total_matches")
+  matchesWon           Int      @default(0) @map("matches_won")
+  matchesLost          Int      @default(0) @map("matches_lost")
+  matchesDrawn         Int      @default(0) @map("matches_drawn")
+  setsWon              Int      @default(0) @map("sets_won")
+  setsLost             Int      @default(0) @map("sets_lost")
+  gamesWon             Int      @default(0) @map("games_won")
+  gamesLost            Int      @default(0) @map("games_lost")
+  tournamentsPlayed    Int      @default(0) @map("tournaments_played")
+  tournamentsWon       Int      @default(0) @map("tournaments_won")
+  tournamentPoints     Float    @default(0) @map("tournament_points")
+  winPercentage        Float    @default(0) @map("win_percentage")
+  lastUpdated          DateTime @updatedAt @map("last_updated")
+
+  player               Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@map("player_stats")
+}
+
+model Tournament {
+  id           String             @id @default(uuid())
+  userId       String             @map("user_id")
+  name         String
+  type         TournamentType
+  category     TournamentCategory @default(OPEN_250)
+  status       TournamentStatus   @default(CREATED)
+  currentPhase Int                @default(1) @map("current_phase")
+  maxPhases    Int                @default(1) @map("max_phases")
+  allowTies    Boolean            @default(false) @map("allow_ties")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  startedAt    DateTime?          @map("started_at")
+  finishedAt   DateTime?          @map("finished_at")
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  players      TournamentPlayer[]
+  matches      Match[]
+  results      TournamentResult[]
+
+  @@index([userId])
+  @@map("tournaments")
+}
+
+model TournamentPlayer {
+  tournamentId String  @map("tournament_id")
+  playerId     String  @map("player_id")
+  groupNumber  Int?    @map("group_number")
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@id([tournamentId, playerId])
+  @@index([tournamentId])
+  @@index([playerId])
+  @@map("tournament_players")
+}
+
+model Match {
+  id           String       @id @default(uuid())
+  tournamentId String       @map("tournament_id")
+  phase        Int
+  roundNumber  Int          @map("round_number")
+  matchNumber  Int          @map("match_number")
+  player1Id    String       @map("player1_id")
+  player2Id    String       @map("player2_id")
+  player3Id    String       @map("player3_id")
+  player4Id    String       @map("player4_id")
+  team1Score   Int?         @map("team1_score")
+  team2Score   Int?         @map("team2_score")
+  set1Team1    Int?         @map("set1_team1")
+  set1Team2    Int?         @map("set1_team2")
+  set2Team1    Int?         @map("set2_team1")
+  set2Team2    Int?         @map("set2_team2")
+  set3Team1    Int?         @map("set3_team1")
+  set3Team2    Int?         @map("set3_team2")
+  winnerTeam   Int?         @map("winner_team")
+  status       MatchStatus  @default(SCHEDULED)
+  groupNumber  Int?         @map("group_number")
+  matchDay     Int?         @map("match_day")
+  scheduledAt  DateTime?    @map("scheduled_at")
+  playedAt     DateTime?    @map("played_at")
+
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  player1      Player       @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
+  player2      Player       @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
+  player3      Player       @relation("MatchPlayer3", fields: [player3Id], references: [id], onDelete: Cascade)
+  player4      Player       @relation("MatchPlayer4", fields: [player4Id], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([player1Id])
+  @@index([player2Id])
+  @@index([player3Id])
+  @@index([player4Id])
+  @@map("matches")
+}
+
+enum TournamentType {
+  ROUND_ROBIN
+  KNOCKOUT
+  GROUP_STAGE_KNOCKOUT
+}
+
+enum TournamentStatus {
+  CREATED
+  IN_PROGRESS
+  PHASE_1_COMPLETE
+  PHASE_2_COMPLETE
+  FINISHED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TournamentCategory {
+  OPEN_250
+  OPEN_500
+  OPEN_1000
+  MASTERS
+}
+
+// Stores point configuration for each category/position
+model TournamentPointConfig {
+  id        String             @id @default(uuid())
+  userId    String             @map("user_id")
+  category  TournamentCategory
+  position  Int                // 1 = 1st place, 2 = 2nd place, etc.
+  points    Float              // Points awarded for this position
+
+  @@unique([userId, category, position])
+  @@index([userId])
+  @@map("tournament_point_configs")
+}
+
+// Tracks each player's result in a tournament
+model TournamentResult {
+  id             String             @id @default(uuid())
+  tournamentId   String             @map("tournament_id")
+  playerId       String             @map("player_id")
+  finalPosition  Int                @map("final_position")
+  pointsAwarded  Float              @map("points_awarded")
+  bonusPoints    Float              @default(0) @map("bonus_points")
+  category       TournamentCategory
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  tournament     Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  player         Player             @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, playerId])
+  @@index([tournamentId])
+  @@index([playerId])
+  @@map("tournament_results")
+}

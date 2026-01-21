@@ -1,0 +1,20 @@
+# Built files
+build/
+.gradle/
+
+# IDE
+.idea/
+
+# Local configuration
+local.properties
+
+# OS files
+nul
+.DS_Store
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+
+# Test output
+test_build.txt

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material Text Input Layout Styles -->
+    <style name="Widget.Material3.TextInputLayout.OutlinedBox" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/padel_primary</item>
+        <item name="hintTextColor">@color/padel_primary</item>
+    </style>
+
+    <!-- Material Button Styles -->
+    <style name="Widget.Material3.Button" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/padel_primary</item>
+    </style>
+
+    <style name="Widget.Material3.Button.TonalButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="backgroundTint">@color/padel_primary_container</item>
+        <item name="android:textColor">@color/padel_on_primary_container</item>
+    </style>
+
+    <!-- Text Appearance Styles - Material3 aliases for compatibility -->
+    <style name="TextAppearance.Material3.BodyLarge" parent="TextAppearance.MaterialComponents.Body1" />
+    <style name="TextAppearance.Material3.BodyMedium" parent="TextAppearance.MaterialComponents.Body2" />
+    <style name="TextAppearance.Material3.BodySmall" parent="TextAppearance.MaterialComponents.Caption" />
+    <style name="TextAppearance.Material3.HeadlineSmall" parent="TextAppearance.MaterialComponents.Headline6" />
+    <style name="TextAppearance.Material3.HeadlineMedium" parent="TextAppearance.MaterialComponents.Headline5" />
+    <style name="TextAppearance.Material3.LabelLarge" parent="TextAppearance.MaterialComponents.Button" />
+    
+</resources>

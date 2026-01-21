@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="padel_primary">#2E7D32</color>
+    <color name="padel_primary_container">#C8E6C9</color>
+    <color name="padel_on_primary_container">#1B5E20</color>
+    <color name="padel_secondary">#FF8F00</color>
+    <color name="padel_accent">#4CAF50</color>
+    <color name="padel_background">#F5F5F5</color>
+</resources>

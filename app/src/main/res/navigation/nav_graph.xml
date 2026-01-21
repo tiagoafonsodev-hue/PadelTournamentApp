@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/navigation_tournaments">
+
+    <fragment
+        android:id="@+id/navigation_tournaments"
+        android:name="com.padel.tournament.ui.tournaments.TournamentListFragment"
+        android:label="@string/tournaments"
+        tools:layout="@layout/fragment_tournament_list" />
+
+    <fragment
+        android:id="@+id/navigation_players"
+        android:name="com.padel.tournament.ui.players.PlayerListFragment"
+        android:label="@string/players"
+        tools:layout="@layout/fragment_player_list" />
+
+    <fragment
+        android:id="@+id/navigation_leaderboard"
+        android:name="com.padel.tournament.ui.leaderboard.LeaderboardFragment"
+        android:label="@string/leaderboard"
+        tools:layout="@layout/fragment_leaderboard" />
+
+</navigation>
