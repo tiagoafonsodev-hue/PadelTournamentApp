@@ -1,9 +1,8 @@
 // Match result processing (SINGLE SET SCORING - time limited)
 
-import { PrismaClient, MatchStatus, Match, Tournament } from '@prisma/client';
+import { MatchStatus, Match, Tournament } from '@prisma/client';
 import { tournamentProgress } from './TournamentProgressService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 interface MatchResultData {
   team1Score: number; // Games won by team 1

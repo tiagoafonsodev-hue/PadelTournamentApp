@@ -2,9 +2,8 @@
 // Awards points to players based on final position when tournament finishes
 // Includes bonus points: +1 point for each match won in the tournament
 
-import { PrismaClient, TournamentCategory } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { TournamentCategory } from '@prisma/client';
+import prisma from '../lib/prisma';
 
 // Default point configurations if none set by user
 const DEFAULT_POINTS: Record<TournamentCategory, Record<number, number>> = {

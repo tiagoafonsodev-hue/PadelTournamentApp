@@ -20,7 +20,16 @@
       "Bash(ping:*)",
       "Bash(del:*)",
       "Bash(git config:*)",
-      "Bash(git remote add:*)"
+      "Bash(git remote add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npm test)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(git rm:*)"
     ]
   }
 }

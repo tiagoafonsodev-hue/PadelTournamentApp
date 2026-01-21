@@ -1,11 +1,10 @@
 import { Response } from 'express';
-import { PrismaClient, TournamentType, TournamentStatus, MatchStatus, TournamentCategory } from '@prisma/client';
+import { TournamentType, TournamentStatus, MatchStatus, TournamentCategory } from '@prisma/client';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
 import { tournamentScheduler } from '../services/TournamentSchedulerService';
 import { tournamentProgress } from '../services/TournamentProgressService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 const tournamentSchema = z.object({
   name: z.string().min(1),

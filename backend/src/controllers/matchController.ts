@@ -1,10 +1,8 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
 import { matchResultService } from '../services/MatchResultService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 const matchResultSchema = z.object({
   team1Score: z.number().min(0),

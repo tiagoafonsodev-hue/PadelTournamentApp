@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 import { Player, TournamentType, TournamentCategory } from '@/types';
@@ -24,9 +24,21 @@ export default function CreateTournamentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const fetchPlayers = useCallback(async () => {
+    try {
+      const url = search
+        ? `/api/players?search=${encodeURIComponent(search)}`
+        : '/api/players';
+      const response = await apiClient.get(url);
+      setPlayers(response.data);
+    } catch (err) {
+      console.error('Failed to load players', err);
+    }
+  }, [search]);
+
   useEffect(() => {
     fetchPlayers();
-  }, [search]);
+  }, [fetchPlayers]);
 
   // Initialize empty teams when player count changes
   useEffect(() => {
@@ -37,18 +49,6 @@ export default function CreateTournamentPage() {
     }
     setTeams(newTeams);
   }, [playerCount]);
-
-  const fetchPlayers = async () => {
-    try {
-      const url = search
-        ? `/api/players?search=${encodeURIComponent(search)}`
-        : '/api/players';
-      const response = await apiClient.get(url);
-      setPlayers(response.data);
-    } catch (err) {
-      console.error('Failed to load players', err);
-    }
-  };
 
   const getAvailableTournamentTypes = (count: number): TournamentType[] => {
     switch (count) {

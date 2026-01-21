@@ -1,10 +1,9 @@
 // Port of Android TournamentProgressManager.kt
 
-import { PrismaClient, Tournament, Match, TournamentStatus, MatchStatus } from '@prisma/client';
+import { Tournament, Match, TournamentStatus, MatchStatus } from '@prisma/client';
 import { tournamentScheduler } from './TournamentSchedulerService';
 import { tournamentPointService } from './TournamentPointService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 interface TeamStanding {
   player1Id: string;

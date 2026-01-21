@@ -1,7 +1,0 @@
-{
-  "/dashboard/tournaments/page": "app/dashboard/tournaments/page.js",
-  "/dashboard/tournaments/[id]/standings/page": "app/dashboard/tournaments/[id]/standings/page.js",
-  "/dashboard/tournaments/[id]/page": "app/dashboard/tournaments/[id]/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js",
-  "/dashboard/tournaments/create/page": "app/dashboard/tournaments/create/page.js"
-}

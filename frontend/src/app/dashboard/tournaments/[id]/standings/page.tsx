@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import apiClient from '@/lib/api-client';
 
@@ -39,13 +39,7 @@ export default function TournamentStandingsPage() {
   const [standings, setStandings] = useState<TeamStanding[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (params.id) {
-      fetchData();
-    }
-  }, [params.id]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [tournamentRes, standingsRes] = await Promise.all([
         apiClient.get(`/api/tournaments/${params.id}`),
@@ -80,7 +74,13 @@ export default function TournamentStandingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchData();
+    }
+  }, [params.id, fetchData]);
 
   if (loading) {
     return (
