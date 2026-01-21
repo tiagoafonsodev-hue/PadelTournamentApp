@@ -1,6 +1,6 @@
 # Padel Tournament Manager - Web Application
 
-A full-stack web application for managing padel tournaments, ported from the Android app. Features include player management, tournament creation (Round Robin, Knockout, Group Stage + Knockout), match tracking, leaderboards, and real-time updates.
+A full-stack web application for managing padel tournaments. Features include player management, tournament creation (Round Robin, Knockout, Group Stage + Knockout), match tracking, leaderboards, and real-time updates.
 
 ## Tech Stack
 
@@ -49,12 +49,12 @@ PadelTournamentApp/
 │   │   └── types/          # TypeScript interfaces
 │   ├── package.json
 │   └── tsconfig.json
-└── app/                     # Original Android app (Kotlin)
+└── start.bat                # Quick start script for Windows
 ```
 
 ## Features
 
-### Core Features (From Android App)
+### Core Features
 - **Player Management**: Create, edit, delete players with optional email and phone
 - **Tournament Creation**:
   - Round Robin (all teams play each other)
@@ -299,7 +299,7 @@ The backend is complete. To finish the frontend:
 
 ## Contributing
 
-This project was ported from an Android app. The core business logic in the `services/` directory mirrors the Android implementation for consistency.
+Contributions are welcome! Please open an issue or submit a pull request.
 
 ## License
 
