@@ -4,14 +4,14 @@ import { Match } from '@/types';
 
 interface KnockoutBracketProps {
   matches: Match[];
-  onMatchClick: (match: Match) => void;
+  onMatchClick?: (match: Match) => void;
   tournamentType: 'KNOCKOUT' | 'GROUP_STAGE_KNOCKOUT';
 }
 
 interface MatchCardProps {
   match: Match | null;
   label: string;
-  onMatchClick: (match: Match) => void;
+  onMatchClick?: (match: Match) => void;
   isCompact?: boolean;
 }
 
@@ -28,12 +28,13 @@ const MatchCard = ({ match, label, onMatchClick, isCompact = false }: MatchCardP
   const isCompleted = match.status === 'COMPLETED';
   const team1Won = match.winnerTeam === 1;
   const team2Won = match.winnerTeam === 2;
+  const isClickable = !!onMatchClick;
 
   return (
     <div
-      onClick={() => onMatchClick(match)}
-      className={`border rounded-lg ${isCompact ? 'p-2' : 'p-3'} cursor-pointer transition-all hover:shadow-md ${
-        isCompleted ? 'bg-white border-green-300' : 'bg-white border-gray-300 hover:border-primary'
+      onClick={() => onMatchClick && onMatchClick(match)}
+      className={`border rounded-lg ${isCompact ? 'p-2' : 'p-3'} ${isClickable ? 'cursor-pointer hover:shadow-md' : ''} transition-all ${
+        isCompleted ? 'bg-white border-green-300' : `bg-white border-gray-300 ${isClickable ? 'hover:border-primary' : ''}`
       }`}
     >
       <div className="flex items-center justify-between mb-1">

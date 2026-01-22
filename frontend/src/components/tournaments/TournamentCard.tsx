@@ -7,7 +7,7 @@ import { Card, Badge, getTournamentStatusVariant } from '@/components/ui';
 
 interface TournamentCardProps {
   tournament: Tournament;
-  onDelete: (id: string, name: string) => void;
+  onDelete?: (id: string, name: string) => void;
 }
 
 function getTypeLabel(type: string): string {
@@ -62,16 +62,18 @@ export function TournamentCard({ tournament, onDelete }: TournamentCardProps) {
           View Details
           <ChevronRight className="h-4 w-4" />
         </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(tournament.id, tournament.name);
-          }}
-          className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
-          title="Delete tournament"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(tournament.id, tournament.name);
+            }}
+            className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
+            title="Delete tournament"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </Card>
   );

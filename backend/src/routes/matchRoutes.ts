@@ -1,11 +1,13 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { submitMatchResult } from '../controllers/matchController';
 
 const router = express.Router();
 
+// All routes require authentication
 router.use(authMiddleware);
 
-router.post('/:id/result', submitMatchResult);
+// Admin-only routes
+router.post('/:id/result', adminMiddleware, submitMatchResult);
 
 export default router;

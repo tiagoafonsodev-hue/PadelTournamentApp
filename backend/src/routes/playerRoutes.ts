@@ -1,8 +1,9 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import {
   createPlayer,
   getPlayers,
+  getPlayer,
   updatePlayer,
   deletePlayer,
   getLeaderboard,
@@ -10,12 +11,19 @@ import {
 
 const router = express.Router();
 
+// All routes require authentication
 router.use(authMiddleware);
 
-router.post('/', createPlayer);
+// Public routes (all authenticated users)
 router.get('/', getPlayers);
-router.put('/:id', updatePlayer);
-router.delete('/:id', deletePlayer);
 router.get('/leaderboard', getLeaderboard);
+router.get('/:id', getPlayer);
+
+// updatePlayer handles its own permission logic (admin can update any, player can update own profile)
+router.put('/:id', updatePlayer);
+
+// Admin-only routes
+router.post('/', adminMiddleware, createPlayer);
+router.delete('/:id', adminMiddleware, deletePlayer);
 
 export default router;

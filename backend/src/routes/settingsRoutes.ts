@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import {
   getPointConfigurations,
   getPointConfiguration,
@@ -8,8 +8,9 @@ import {
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication and admin role
 router.use(authMiddleware);
+router.use(adminMiddleware);
 
 // Get all point configurations
 router.get('/points', getPointConfigurations);

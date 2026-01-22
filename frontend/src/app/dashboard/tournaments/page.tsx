@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trophy } from 'lucide-react';
 import { useTournaments } from '@/hooks/queries';
@@ -7,12 +8,21 @@ import { useDeleteTournament } from '@/hooks/mutations';
 import { useToast } from '@/providers';
 import { TournamentCard } from '@/components/tournaments/TournamentCard';
 import { Button, Spinner, EmptyState, PageHeader } from '@/components/ui';
+import { UserRole } from '@/types';
 
 export default function TournamentsPage() {
   const router = useRouter();
   const { data: tournaments, isLoading, error } = useTournaments();
   const deleteMutation = useDeleteTournament();
   const { showToast } = useToast();
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setUserRole(user.role || null);
+  }, []);
+
+  const isAdmin = userRole === UserRole.ADMIN;
 
   const handleDelete = async (tournamentId: string, tournamentName: string) => {
     if (!confirm(`Are you sure you want to delete "${tournamentName}"? This action cannot be undone.`)) {
@@ -39,12 +49,14 @@ export default function TournamentsPage() {
     <div className="px-4 sm:px-0">
       <PageHeader
         title="Tournaments"
-        description="Manage your padel tournaments"
+        description={isAdmin ? "Manage your padel tournaments" : "View all tournaments"}
         action={
-          <Button onClick={() => router.push('/dashboard/tournaments/create')}>
-            <Plus className="h-4 w-4" />
-            Create Tournament
-          </Button>
+          isAdmin && (
+            <Button onClick={() => router.push('/dashboard/tournaments/create')}>
+              <Plus className="h-4 w-4" />
+              Create Tournament
+            </Button>
+          )
         }
       />
 
@@ -58,12 +70,14 @@ export default function TournamentsPage() {
         <EmptyState
           icon={Trophy}
           title="No tournaments yet"
-          description="Create your first tournament to get started!"
+          description={isAdmin ? "Create your first tournament to get started!" : "No tournaments have been created yet"}
           action={
-            <Button onClick={() => router.push('/dashboard/tournaments/create')}>
-              <Plus className="h-4 w-4" />
-              Create Tournament
-            </Button>
+            isAdmin && (
+              <Button onClick={() => router.push('/dashboard/tournaments/create')}>
+                <Plus className="h-4 w-4" />
+                Create Tournament
+              </Button>
+            )
           }
         />
       ) : (
@@ -72,7 +86,7 @@ export default function TournamentsPage() {
             <TournamentCard
               key={tournament.id}
               tournament={tournament}
-              onDelete={handleDelete}
+              onDelete={isAdmin ? handleDelete : undefined}
             />
           ))}
         </div>

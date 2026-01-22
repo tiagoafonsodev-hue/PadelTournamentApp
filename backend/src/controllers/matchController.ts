@@ -9,18 +9,18 @@ const matchResultSchema = z.object({
   team2Score: z.number().min(0),
 });
 
+// Admin only: Submit match result (protected by adminMiddleware in routes)
 export const submitMatchResult = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const data = matchResultSchema.parse(req.body);
 
-    // Verify match belongs to user's tournament
-    const match = await prisma.match.findFirst({
+    const match = await prisma.match.findUnique({
       where: { id },
       include: { tournament: true },
     });
 
-    if (!match || match.tournament.userId !== req.userId!) {
+    if (!match) {
       return res.status(404).json({ error: 'Match not found' });
     }
 

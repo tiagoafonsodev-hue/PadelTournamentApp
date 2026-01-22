@@ -11,7 +11,8 @@ const pointConfigSchema = z.object({
 });
 
 /**
- * Get all point configurations for the current user
+ * Admin only: Get all point configurations
+ * Protected by adminMiddleware in routes
  */
 export const getPointConfigurations = async (req: AuthRequest, res: Response) => {
   try {
@@ -24,7 +25,8 @@ export const getPointConfigurations = async (req: AuthRequest, res: Response) =>
 };
 
 /**
- * Get point configuration for a specific category
+ * Admin only: Get point configuration for a specific category
+ * Protected by adminMiddleware in routes
  */
 export const getPointConfiguration = async (req: AuthRequest, res: Response) => {
   try {
@@ -47,7 +49,8 @@ export const getPointConfiguration = async (req: AuthRequest, res: Response) => 
 };
 
 /**
- * Save point configuration for a category
+ * Admin only: Save point configuration for a category
+ * Protected by adminMiddleware in routes
  */
 export const savePointConfiguration = async (req: AuthRequest, res: Response) => {
   try {

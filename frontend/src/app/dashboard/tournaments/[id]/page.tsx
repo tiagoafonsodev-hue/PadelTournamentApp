@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChevronDown, ChevronRight, Trophy } from 'lucide-react';
-import { Match, MatchResultInput } from '@/types';
+import { Match, MatchResultInput, UserRole } from '@/types';
 import { useTournament, useTournamentStandings } from '@/hooks/queries';
 import { useSubmitMatchResult } from '@/hooks/mutations';
 import { useToast } from '@/providers';
@@ -40,6 +40,14 @@ export default function TournamentDetailPage() {
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setUserRole(user.role || null);
+  }, []);
+
+  const isAdmin = userRole === UserRole.ADMIN;
 
   // Get standings from API (already sorted by backend)
   const phase1Standings: TeamStanding[] = standingsData || [];
@@ -86,6 +94,7 @@ export default function TournamentDetailPage() {
   };
 
   const openMatchDialog = (match: Match) => {
+    if (!isAdmin) return; // Only admins can enter results
     setSelectedMatch(match);
   };
 
@@ -438,7 +447,7 @@ export default function TournamentDetailPage() {
           <h2 className="text-lg font-medium text-gray-900 mb-4">Tournament Bracket</h2>
           <KnockoutBracket
             matches={tournament.matches || []}
-            onMatchClick={openMatchDialog}
+            onMatchClick={isAdmin ? openMatchDialog : undefined}
             tournamentType="KNOCKOUT"
           />
         </div>
@@ -540,12 +549,14 @@ export default function TournamentDetailPage() {
                                         )}
                                       </div>
                                     </div>
-                                    <button
-                                      onClick={() => openMatchDialog(match)}
-                                      className="w-full px-3 py-1.5 text-xs font-medium text-white bg-primary rounded hover:bg-primary-dark"
-                                    >
-                                      {match.status === 'COMPLETED' ? 'Edit' : 'Enter Result'}
-                                    </button>
+                                    {isAdmin && (
+                                      <button
+                                        onClick={() => openMatchDialog(match)}
+                                        className="w-full px-3 py-1.5 text-xs font-medium text-white bg-primary rounded hover:bg-primary-dark"
+                                      >
+                                        {match.status === 'COMPLETED' ? 'Edit' : 'Enter Result'}
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               ))}
@@ -568,7 +579,7 @@ export default function TournamentDetailPage() {
                   <div key="Phase 2" id="phase-2-section" className="mb-6 scroll-mt-4">
                     <KnockoutBracket
                       matches={phase2Matches}
-                      onMatchClick={openMatchDialog}
+                      onMatchClick={isAdmin ? openMatchDialog : undefined}
                       tournamentType="GROUP_STAGE_KNOCKOUT"
                     />
                   </div>
@@ -679,12 +690,14 @@ export default function TournamentDetailPage() {
                                   </div>
                                 </div>
                               </div>
+                              {isAdmin && (
                               <button
                                 onClick={() => openMatchDialog(match)}
                                 className="ml-4 px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark"
                               >
                                 {match.status === 'COMPLETED' ? 'Edit Result' : 'Enter Result'}
                               </button>
+                            )}
                             </div>
                           </div>
                         ))}

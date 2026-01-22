@@ -3,20 +3,31 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Trophy, Users, BarChart3, Settings, LogOut, Wifi, WifiOff } from 'lucide-react';
+import { Trophy, Users, BarChart3, Settings, LogOut, Wifi, WifiOff, User } from 'lucide-react';
 import { useSocket } from '@/providers';
+import { UserRole } from '@/types';
 
-const navItems = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
+  playerOnly?: boolean;
+}
+
+const navItems: NavItem[] = [
   { name: 'Tournaments', href: '/dashboard/tournaments', icon: Trophy },
   { name: 'Players', href: '/dashboard/players', icon: Users },
   { name: 'Leaderboard', href: '/dashboard/leaderboard', icon: BarChart3 },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Profile', href: '/dashboard/profile', icon: User, playerOnly: true },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings, adminOnly: true },
 ];
 
 export function NavBar() {
   const router = useRouter();
   const pathname = usePathname();
   const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const { isConnected } = useSocket();
 
   useEffect(() => {
@@ -28,7 +39,17 @@ export function NavBar() {
 
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     setUserName(user.name || '');
+    setUserRole(user.role || null);
   }, [router]);
+
+  const isAdmin = userRole === UserRole.ADMIN;
+  const isPlayer = userRole === UserRole.PLAYER;
+
+  const filteredNavItems = navItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.playerOnly && !isPlayer) return false;
+    return true;
+  });
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -48,7 +69,7 @@ export function NavBar() {
               </span>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
-              {navItems.map((item) => {
+              {filteredNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                 return (

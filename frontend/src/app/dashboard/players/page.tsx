@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Users, Search } from 'lucide-react';
-import { Player } from '@/types';
+import { Player, UserRole } from '@/types';
 import { usePlayers } from '@/hooks/queries';
 import { useCreatePlayer, useUpdatePlayer, useDeletePlayer } from '@/hooks/mutations';
 import { useToast } from '@/providers';
@@ -14,7 +14,17 @@ export default function PlayersPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userPlayerId, setUserPlayerId] = useState<string | null>(null);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setUserRole(user.role || null);
+    setUserPlayerId(user.playerId || null);
+  }, []);
+
+  const isAdmin = userRole === UserRole.ADMIN;
 
   const { data: players, isLoading } = usePlayers(search);
   const createMutation = useCreatePlayer();
@@ -69,12 +79,14 @@ export default function PlayersPage() {
     <div className="px-4 sm:px-0">
       <PageHeader
         title="Players"
-        description="Manage your players database"
+        description={isAdmin ? "Manage your players database" : "View all players"}
         action={
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4" />
-            Add Player
-          </Button>
+          isAdmin && (
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4" />
+              Add Player
+            </Button>
+          )
         }
       />
 
@@ -101,9 +113,9 @@ export default function PlayersPage() {
         <EmptyState
           icon={Users}
           title="No players found"
-          description={search ? 'Try a different search term' : 'Add your first player!'}
+          description={search ? 'Try a different search term' : (isAdmin ? 'Add your first player!' : 'No players registered yet')}
           action={
-            !search && (
+            isAdmin && !search && (
               <Button onClick={() => setShowForm(true)}>
                 <Plus className="h-4 w-4" />
                 Add Player
@@ -117,8 +129,9 @@ export default function PlayersPage() {
             <PlayerCard
               key={player.id}
               player={player}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onEdit={isAdmin ? handleEdit : undefined}
+              onDelete={isAdmin ? handleDelete : undefined}
+              isOwnProfile={player.id === userPlayerId}
             />
           ))}
         </div>

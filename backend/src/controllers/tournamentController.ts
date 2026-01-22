@@ -102,10 +102,10 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// All users: Get all tournaments (global)
 export const getTournaments = async (req: AuthRequest, res: Response) => {
   try {
     const tournaments = await prisma.tournament.findMany({
-      where: { userId: req.userId! },
       include: {
         players: { include: { player: true } },
         matches: true,
@@ -119,12 +119,13 @@ export const getTournaments = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// All users: Get tournament by ID (global)
 export const getTournamentById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const tournament = await prisma.tournament.findFirst({
-      where: { id, userId: req.userId! },
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
       include: {
         players: { include: { player: true } },
         matches: {
@@ -149,13 +150,13 @@ export const getTournamentById = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// All users: Get tournament standings (global)
 export const getTournamentStandings = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Verify tournament belongs to user
-    const tournament = await prisma.tournament.findFirst({
-      where: { id, userId: req.userId! },
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
       include: {
         matches: {
           include: {
@@ -405,13 +406,13 @@ async function calculateKnockoutStandings(matches: any[]) {
   return standings;
 }
 
+// Admin only: Delete a tournament (protected by adminMiddleware in routes)
 export const deleteTournament = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Verify tournament belongs to user
-    const tournament = await prisma.tournament.findFirst({
-      where: { id, userId: req.userId! },
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
     });
 
     if (!tournament) {

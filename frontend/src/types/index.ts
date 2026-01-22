@@ -1,7 +1,14 @@
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  PLAYER = 'PLAYER',
+}
+
 export interface User {
   id: string;
   email: string;
   name: string;
+  role: UserRole;
+  playerId?: string | null;
 }
 
 export interface AuthResponse {
@@ -11,7 +18,6 @@ export interface AuthResponse {
 
 export interface Player {
   id: string;
-  userId: string;
   name: string;
   email?: string | null;
   phoneNumber?: string | null;

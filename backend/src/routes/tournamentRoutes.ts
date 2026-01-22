@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import {
   createTournament,
   getTournaments,
@@ -10,12 +10,16 @@ import {
 
 const router = express.Router();
 
+// All routes require authentication
 router.use(authMiddleware);
 
-router.post('/', createTournament);
+// Public routes (all authenticated users)
 router.get('/', getTournaments);
 router.get('/:id', getTournamentById);
 router.get('/:id/standings', getTournamentStandings);
-router.delete('/:id', deleteTournament);
+
+// Admin-only routes
+router.post('/', adminMiddleware, createTournament);
+router.delete('/:id', adminMiddleware, deleteTournament);
 
 export default router;

@@ -9,29 +9,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  ADMIN
+  PLAYER
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
   passwordHash String       @map("password_hash")
   name         String
+  role         UserRole     @default(PLAYER)
+  playerId     String?      @unique @map("player_id")
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
-  players      Player[]
+  player       Player?      @relation(fields: [playerId], references: [id])
   tournaments  Tournament[]
+  pointConfigs TournamentPointConfig[]
 
   @@map("users")
 }
 
 model Player {
   id          String    @id @default(uuid())
-  userId      String    @map("user_id")
   name        String
   email       String?
   phoneNumber String?   @map("phone_number")
   createdAt   DateTime  @default(now()) @map("created_at")
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User?
   stats       PlayerStats?
   tournaments TournamentPlayer[]
   tournamentResults TournamentResult[]
@@ -40,7 +47,6 @@ model Player {
   matchesAsPlayer3 Match[] @relation("MatchPlayer3")
   matchesAsPlayer4 Match[] @relation("MatchPlayer4")
 
-  @@index([userId])
   @@map("players")
 }
 
@@ -177,6 +183,8 @@ model TournamentPointConfig {
   category  TournamentCategory
   position  Int                // 1 = 1st place, 2 = 2nd place, etc.
   points    Float              // Points awarded for this position
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, category, position])
   @@index([userId])
