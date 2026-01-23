@@ -31,16 +31,14 @@ describe('usePlayers', () => {
     const mockPlayers: Player[] = [
       {
         id: '1',
-        userId: 'user1',
-        name: 'Player 1',
+                name: 'Player 1',
         email: 'player1@test.com',
         phoneNumber: '123456789',
         createdAt: '2024-01-01T00:00:00Z',
       },
       {
         id: '2',
-        userId: 'user1',
-        name: 'Player 2',
+                name: 'Player 2',
         createdAt: '2024-01-01T00:00:00Z',
       },
     ];
@@ -59,8 +57,7 @@ describe('usePlayers', () => {
     const mockPlayers: Player[] = [
       {
         id: '1',
-        userId: 'user1',
-        name: 'Player 1',
+                name: 'Player 1',
         createdAt: '2024-01-01T00:00:00Z',
       },
     ];

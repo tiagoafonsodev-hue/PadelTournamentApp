@@ -1,4 +1,5 @@
 import express from 'express';
+import multer from 'multer';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import {
   createPlayer,
@@ -8,6 +9,28 @@ import {
   deletePlayer,
   getLeaderboard,
 } from '../controllers/playerController';
+import { importPlayers, getPlayerTemplate } from '../controllers/importController';
+
+// Configure multer for file uploads (in-memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept Excel and CSV files
+    const allowedMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv', // .csv
+    ];
+    if (allowedMimes.includes(file.mimetype) || file.originalname.match(/\.(xlsx|xls|csv)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel (.xlsx, .xls) and CSV files are allowed'));
+    }
+  },
+});
 
 const router = express.Router();
 
@@ -25,5 +48,9 @@ router.put('/:id', updatePlayer);
 // Admin-only routes
 router.post('/', adminMiddleware, createPlayer);
 router.delete('/:id', adminMiddleware, deletePlayer);
+
+// Import routes (admin only)
+router.get('/template', adminMiddleware, getPlayerTemplate);
+router.post('/import', adminMiddleware, upload.single('file'), importPlayers);
 
 export default router;

@@ -30,8 +30,7 @@ describe('useCreatePlayer', () => {
   it('should create player successfully', async () => {
     const mockPlayer: Player = {
       id: '1',
-      userId: 'user1',
-      name: 'New Player',
+            name: 'New Player',
       email: 'newplayer@test.com',
       phoneNumber: '123456789',
       createdAt: '2024-01-01T00:00:00Z',
@@ -60,8 +59,7 @@ describe('useCreatePlayer', () => {
   it('should create player with only name', async () => {
     const mockPlayer: Player = {
       id: '1',
-      userId: 'user1',
-      name: 'Player Name',
+            name: 'Player Name',
       createdAt: '2024-01-01T00:00:00Z',
     };
 
@@ -84,8 +82,7 @@ describe('useCreatePlayer', () => {
   it('should invalidate players query on success', async () => {
     const mockPlayer: Player = {
       id: '1',
-      userId: 'user1',
-      name: 'New Player',
+            name: 'New Player',
       createdAt: '2024-01-01T00:00:00Z',
     };
 

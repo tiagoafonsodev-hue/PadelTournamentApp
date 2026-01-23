@@ -1,18 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Users, Search } from 'lucide-react';
+import { Plus, Users, Search, Upload } from 'lucide-react';
 import { Player, UserRole } from '@/types';
 import { usePlayers } from '@/hooks/queries';
 import { useCreatePlayer, useUpdatePlayer, useDeletePlayer } from '@/hooks/mutations';
 import { useToast } from '@/providers';
 import { PlayerCard } from '@/components/players/PlayerCard';
 import { PlayerFormModal } from '@/components/players/PlayerFormModal';
-import { Button, Spinner, EmptyState, PageHeader, Input } from '@/components/ui';
+import { ImportPlayersModal } from '@/components/players/ImportPlayersModal';
+import { Button, Spinner, EmptyState, PageHeader } from '@/components/ui';
 
 export default function PlayersPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [userPlayerId, setUserPlayerId] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function PlayersPage() {
 
   const isAdmin = userRole === UserRole.ADMIN;
 
-  const { data: players, isLoading } = usePlayers(search);
+  const { data: players, isLoading, refetch } = usePlayers(search);
   const createMutation = useCreatePlayer();
   const updateMutation = useUpdatePlayer();
   const deleteMutation = useDeletePlayer();
@@ -82,10 +84,16 @@ export default function PlayersPage() {
         description={isAdmin ? "Manage your players database" : "View all players"}
         action={
           isAdmin && (
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="h-4 w-4" />
-              Add Player
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setShowImport(true)}>
+                <Upload className="h-4 w-4" />
+                Import
+              </Button>
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="h-4 w-4" />
+                Add Player
+              </Button>
+            </div>
           )
         }
       />
@@ -107,6 +115,15 @@ export default function PlayersPage() {
         onSubmit={handleSubmit}
         player={editingPlayer}
         isLoading={createMutation.isPending || updateMutation.isPending}
+      />
+
+      <ImportPlayersModal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        onSuccess={() => {
+          refetch();
+          showToast('Players imported successfully', 'success');
+        }}
       />
 
       {!players || players.length === 0 ? (
