@@ -16,11 +16,17 @@ export interface TeamStanding {
   gamesWon: number;
   gamesLost: number;
   groupNumber?: number;
+  groupPosition?: number;
   position?: number;
+  tournamentPointsAwarded?: number;
+  bonusPoints?: number;
 }
 
-async function fetchTournamentStandings(id: string): Promise<TeamStanding[]> {
-  const { data } = await apiClient.get<TeamStanding[]>(`/api/tournaments/${id}/standings`);
+async function fetchTournamentStandings(id: string, final?: boolean): Promise<TeamStanding[]> {
+  const url = final
+    ? `/api/tournaments/${id}/standings?final=true`
+    : `/api/tournaments/${id}/standings`;
+  const { data } = await apiClient.get<TeamStanding[]>(url);
   return data;
 }
 
@@ -29,5 +35,14 @@ export function useTournamentStandings(id: string) {
     queryKey: queryKeys.tournaments.standings(id),
     queryFn: () => fetchTournamentStandings(id),
     enabled: !!id,
+  });
+}
+
+// Hook to fetch final standings (for Final Classification modal)
+export function useFinalStandings(id: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: [...queryKeys.tournaments.standings(id), 'final'],
+    queryFn: () => fetchTournamentStandings(id, true),
+    enabled: !!id && enabled,
   });
 }

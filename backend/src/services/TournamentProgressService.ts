@@ -911,7 +911,7 @@ export class TournamentProgressService {
 
     if (isMultiGroup) {
       // Multi-group tournament: get top 2 from each group and cross them
-      await this.advanceMultiGroupPlayoff(tournament, Array.from(groupNumbers).sort());
+      await this.advanceMultiGroupPlayoff(tournament, Array.from(groupNumbers).sort((a, b) => a - b));
       return;
     }
 
@@ -1006,7 +1006,7 @@ export class TournamentProgressService {
    * Also crosses 3rd/4th: 3A vs 4B, 3B vs 4A (semi-finals for 3rd/4th)
    */
   private async advanceMultiGroupPlayoff(tournament: Tournament, groupNumbers: number[]): Promise<void> {
-    // Get standings for each group
+    // Get standings for each group SEPARATELY (per-group classification)
     const groupStandings: Map<number, TeamStanding[]> = new Map();
 
     for (const groupNum of groupNumbers) {
@@ -1027,7 +1027,7 @@ export class TournamentProgressService {
 
       const standings = this.buildStandingsFromMatches(matches);
 
-      // Sort by: points desc, set diff desc, game diff desc
+      // Sort by: points desc, set diff desc, game diff desc (WITHIN THIS GROUP ONLY)
       standings.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
 
@@ -1070,12 +1070,15 @@ export class TournamentProgressService {
     const playoffMatches: any[] = [];
     let matchNumber = 1;
 
-    // For 2 groups (16 players): create semi-finals and finals
+    // For 2 groups (16 players / 8 teams): create semi-finals and finals
+    // Bracket assignment based on PER-GROUP classification:
+    // - Winners SF: 1st and 2nd from each group compete for 1st-4th place
+    // - Consolation SF: 3rd and 4th from each group compete for 5th-8th place
     if (groupNumbers.length === 2) {
       const group1 = groupStandings.get(1)!;
       const group2 = groupStandings.get(2)!;
 
-      // Semi-finals (Round 1): 1A vs 2B, 2A vs 1B
+      // Winners Semi-finals (Round 1): 1A vs 2B, 2A vs 1B
       playoffMatches.push({
         tournamentId: tournament.id,
         phase: 2,
@@ -1100,7 +1103,7 @@ export class TournamentProgressService {
         status: MatchStatus.SCHEDULED,
       });
 
-      // Semi-finals for 5th-8th place (Round 1): 3A vs 4B, 3B vs 4A
+      // Consolation Semi-finals (Round 1): 3A vs 4B, 3B vs 4A
       playoffMatches.push({
         tournamentId: tournament.id,
         phase: 2,
@@ -1134,7 +1137,7 @@ export class TournamentProgressService {
       const group2 = groupStandings.get(2)!;  // Group B
       const group3 = groupStandings.get(3)!;  // Group C
 
-      // Helper to compare teams by points, set diff, game diff
+      // Helper to compare teams by points, set diff, game diff (for cross-group comparison)
       const compareTeams = (a: TeamStanding, b: TeamStanding) => {
         if (b.points !== a.points) return b.points - a.points;
         const aSetDiff = a.setsWon - a.setsLost;
@@ -1164,7 +1167,7 @@ export class TournamentProgressService {
         { ...group3[3], group: 3 },
       ].sort(compareTeams);
 
-      // Winners Bracket (1st-4th): 1A, 1B, 1C + best 2nd
+      // Winners Bracket (1st-4th): All 1sts + best 2nd
       const winnersBracket = [
         group1[0],  // 1A
         group2[0],  // 1B
@@ -1317,6 +1320,12 @@ export class TournamentProgressService {
         tournamentId,
         groupNumber,
         status: MatchStatus.COMPLETED,
+      },
+      include: {
+        player1: true,
+        player2: true,
+        player3: true,
+        player4: true,
       },
     });
 

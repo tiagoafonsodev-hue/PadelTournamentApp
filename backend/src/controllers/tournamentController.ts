@@ -223,9 +223,11 @@ export const getTournamentById = async (req: AuthRequest, res: Response) => {
 };
 
 // All users: Get tournament standings (global)
+// Query param: ?final=true to get final positions (for Final Classification modal)
 export const getTournamentStandings = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const { final } = req.query; // ?final=true for final classification
 
     const tournament = await prisma.tournament.findUnique({
       where: { id },
@@ -252,14 +254,42 @@ export const getTournamentStandings = async (req: AuthRequest, res: Response) =>
       // For knockout, determine final positions from final matches
       standings = await calculateKnockoutStandings(tournament.matches);
     } else if (tournament.type === 'GROUP_STAGE_KNOCKOUT') {
-      // For group stage, use phase 2 if exists, otherwise phase 1
-      const phase2Matches = tournament.matches.filter((m) => m.phase === 2);
-      if (phase2Matches.length > 0 && phase2Matches.every((m) => m.status === MatchStatus.COMPLETED)) {
-        // Use playoff results
+      // If final=true and tournament is finished, return final knockout standings
+      if (final === 'true' && tournament.status === 'FINISHED') {
+        const phase2Matches = tournament.matches.filter((m) => m.phase === 2);
         standings = await calculateKnockoutStandings(phase2Matches);
       } else {
-        // Use phase 1 standings
-        standings = await tournamentProgress.calculatePhaseStandings(id, 1);
+        // Return Phase 1 group standings for "Phase 1 Classification by Group"
+        const phase1Matches = tournament.matches.filter((m) => m.phase === 1);
+        const groupNumbers = [...new Set(phase1Matches.map(m => m.groupNumber).filter(g => g != null))].sort();
+
+        if (groupNumbers.length > 1) {
+          // Multi-group tournament: return standings per group
+          const groupStandings: any[] = [];
+          for (const groupNum of groupNumbers) {
+            const groupStanding = await tournamentProgress.calculateGroupStandings(id, groupNum as number);
+            // Sort within group
+            groupStanding.sort((a: any, b: any) => {
+              if (b.points !== a.points) return b.points - a.points;
+              const aSetDiff = a.setsWon - a.setsLost;
+              const bSetDiff = b.setsWon - b.setsLost;
+              if (bSetDiff !== aSetDiff) return bSetDiff - aSetDiff;
+              const aGameDiff = a.gamesWon - a.gamesLost;
+              const bGameDiff = b.gamesWon - b.gamesLost;
+              return bGameDiff - aGameDiff;
+            });
+            // Add group position (1st, 2nd, 3rd, 4th within group)
+            groupStanding.forEach((team: any, index: number) => {
+              team.groupPosition = index + 1;
+              team.groupNumber = groupNum;
+            });
+            groupStandings.push(...groupStanding);
+          }
+          standings = groupStandings;
+        } else {
+          // Single group tournament
+          standings = await tournamentProgress.calculatePhaseStandings(id, 1);
+        }
       }
     } else {
       // Round Robin

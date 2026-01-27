@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChevronDown, ChevronRight, Trophy } from 'lucide-react';
 import { Match, MatchResultInput, UserRole } from '@/types';
-import { useTournament, useTournamentStandings } from '@/hooks/queries';
+import { useTournament, useTournamentStandings, useFinalStandings } from '@/hooks/queries';
 import { useSubmitMatchResult } from '@/hooks/mutations';
 import { useToast } from '@/providers';
 import { MatchResultModal } from '@/components/matches/MatchResultModal';
@@ -37,6 +37,10 @@ export default function TournamentDetailPage() {
 
   const { data: tournament, isLoading } = useTournament(tournamentId);
   const { data: standingsData } = useTournamentStandings(tournamentId);
+  const { data: finalStandingsData } = useFinalStandings(
+    tournamentId,
+    tournament?.status === 'FINISHED'
+  );
   const submitResultMutation = useSubmitMatchResult();
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -795,7 +799,7 @@ export default function TournamentDetailPage() {
       <FinalClassificationModal
         isOpen={showFinalClassification}
         onClose={() => setShowFinalClassification(false)}
-        standings={phase1Standings}
+        standings={finalStandingsData || []}
         tournamentName={tournament.name}
         tournamentType={tournament.type}
       />
