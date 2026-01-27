@@ -310,29 +310,54 @@ export class TournamentProgressService {
       // Sort by match number to process in order
       finalMatches.sort((a, b) => a.matchNumber - b.matchNumber);
 
-      for (const match of finalMatches) {
-        let winnerPos: number;
-        let loserPos: number;
-
-        // Determine positions based on match number
-        // 8-team knockout (matches 9-12): Final - 1st/2nd, 3rd/4th, 5th/6th, 7th/8th
-        // 4-team knockout/playoff (matches 3-4 or 5-8): Final, 3rd/4th, etc.
-        // Simple knockout (matches 1-2): Final, 3rd/4th
-        if (match.matchNumber === 9 || match.matchNumber === 5 || match.matchNumber === 3 || match.matchNumber === 1) {
-          winnerPos = 1;
-          loserPos = 2;
-        } else if (match.matchNumber === 10 || match.matchNumber === 6 || match.matchNumber === 4 || match.matchNumber === 2) {
-          winnerPos = 3;
-          loserPos = 4;
-        } else if (match.matchNumber === 11 || match.matchNumber === 7) {
-          winnerPos = 5;
-          loserPos = 6;
-        } else if (match.matchNumber === 12 || match.matchNumber === 8) {
-          winnerPos = 7;
-          loserPos = 8;
+      // Determine position mapping based on tournament type and number of final matches
+      const getPositions = (matchNumber: number, numFinalMatches: number, isGroupStageKnockout: boolean): { winnerPos: number; loserPos: number } | null => {
+        if (isGroupStageKnockout) {
+          // GROUP_STAGE_KNOCKOUT match numbering:
+          // - Open 250 (2 finals): matches 3-4 → 1st/2nd, 3rd/4th
+          // - Open 1000 (4 finals): matches 5-8 → 1st/2nd, 3rd/4th, 5th/6th, 7th/8th
+          // - Masters (6 finals): matches 7-12 → 1st-4th, 5th-8th, 9th-12th
+          if (numFinalMatches === 2) {
+            if (matchNumber === 3) return { winnerPos: 1, loserPos: 2 };
+            if (matchNumber === 4) return { winnerPos: 3, loserPos: 4 };
+          } else if (numFinalMatches === 4) {
+            if (matchNumber === 5) return { winnerPos: 1, loserPos: 2 };
+            if (matchNumber === 6) return { winnerPos: 3, loserPos: 4 };
+            if (matchNumber === 7) return { winnerPos: 5, loserPos: 6 };
+            if (matchNumber === 8) return { winnerPos: 7, loserPos: 8 };
+          } else if (numFinalMatches === 6) {
+            if (matchNumber === 7) return { winnerPos: 1, loserPos: 2 };
+            if (matchNumber === 8) return { winnerPos: 3, loserPos: 4 };
+            if (matchNumber === 9) return { winnerPos: 5, loserPos: 6 };
+            if (matchNumber === 10) return { winnerPos: 7, loserPos: 8 };
+            if (matchNumber === 11) return { winnerPos: 9, loserPos: 10 };
+            if (matchNumber === 12) return { winnerPos: 11, loserPos: 12 };
+          }
         } else {
-          continue;
+          // Pure KNOCKOUT match numbering:
+          // - 4-team (2 finals): matches 3-4 → 1st/2nd, 3rd/4th
+          // - 8-team (4 finals): matches 9-12 → 1st/2nd, 3rd/4th, 5th/6th, 7th/8th
+          if (numFinalMatches === 2) {
+            if (matchNumber === 3) return { winnerPos: 1, loserPos: 2 };
+            if (matchNumber === 4) return { winnerPos: 3, loserPos: 4 };
+          } else if (numFinalMatches === 4) {
+            if (matchNumber === 9) return { winnerPos: 1, loserPos: 2 };
+            if (matchNumber === 10) return { winnerPos: 3, loserPos: 4 };
+            if (matchNumber === 11) return { winnerPos: 5, loserPos: 6 };
+            if (matchNumber === 12) return { winnerPos: 7, loserPos: 8 };
+          }
         }
+        return null;
+      };
+
+      const isGroupStageKnockout = tournament.type === 'GROUP_STAGE_KNOCKOUT';
+
+      for (const match of finalMatches) {
+        const positionMapping = getPositions(match.matchNumber, finalMatches.length, isGroupStageKnockout);
+
+        if (!positionMapping) continue;
+
+        const { winnerPos, loserPos } = positionMapping;
 
         if (match.winnerTeam === 1) {
           positions.push({ playerId: match.player1Id, position: winnerPos, matchesWon: playerWins.get(match.player1Id) || 0 });

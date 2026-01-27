@@ -81,7 +81,9 @@ export default function CreateTournamentPage() {
   // Get available players for a specific slot (excluding already assigned, except current value)
   const getAvailablePlayersForSlot = (currentValue: string): Player[] => {
     const assigned = getAssignedPlayerIds();
-    return players.filter(p => p.id === currentValue || !assigned.has(p.id));
+    return players
+      .filter(p => p.id === currentValue || !assigned.has(p.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const updateTeam = (index: number, field: 'player1Id' | 'player2Id', value: string) => {

@@ -10,6 +10,7 @@ import { useToast } from '@/providers';
 import { MatchResultModal } from '@/components/matches/MatchResultModal';
 import { Spinner, Badge, getTournamentStatusVariant } from '@/components/ui';
 import { KnockoutBracket } from '@/components/tournaments/KnockoutBracket';
+import { FinalClassificationModal } from '@/components/tournaments/FinalClassificationModal';
 
 interface TeamStanding {
   player1Id: string;
@@ -41,6 +42,7 @@ export default function TournamentDetailPage() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [showFinalClassification, setShowFinalClassification] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -177,6 +179,15 @@ export default function TournamentDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            {tournament.status === 'FINISHED' && (
+              <button
+                onClick={() => setShowFinalClassification(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700 flex items-center gap-2"
+              >
+                <Trophy className="w-4 h-4" />
+                View Final Classification
+              </button>
+            )}
             {tournament.type === 'GROUP_STAGE_KNOCKOUT' && tournament.matches?.some(m => m.phase === 2) && (
               <button
                 onClick={() => {
@@ -192,95 +203,7 @@ export default function TournamentDetailPage() {
         </div>
       </div>
 
-      {/* Final Classification for finished tournaments with playoffs */}
-      {tournament.status === 'FINISHED' && (tournament.type === 'GROUP_STAGE_KNOCKOUT' || tournament.type === 'KNOCKOUT') && phase1Standings.some(s => s.position !== undefined) && (
-        <div className="bg-gradient-to-br from-yellow-50 to-white border-2 border-yellow-400 shadow-lg rounded-lg p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Trophy className="w-6 h-6 text-yellow-600" />
-            <h2 className="text-xl font-bold text-gray-900">Final Classification</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pos</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team</th>
-                  <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">W-L</th>
-                  <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Games</th>
-                  <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Base Pts</th>
-                  <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Bonus</th>
-                  <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {[...phase1Standings]
-                  .filter(s => s.position !== undefined)
-                  .sort((a, b) => (a.position || 99) - (b.position || 99))
-                  .map((standing, index) => {
-                    const position = standing.position || index + 1;
-                    const basePoints = standing.tournamentPointsAwarded || 0;
-                    const bonusPoints = standing.bonusPoints || 0;
-                    const totalPoints = basePoints + bonusPoints;
-                    const gameDiff = (standing.gamesWon || 0) - (standing.gamesLost || 0);
-                    let rowClass = '';
-                    let medal = '';
-                    if (position === 1) {
-                      rowClass = 'bg-yellow-100';
-                      medal = '🥇';
-                    } else if (position === 2) {
-                      rowClass = 'bg-gray-100';
-                      medal = '🥈';
-                    } else if (position === 3) {
-                      rowClass = 'bg-orange-100';
-                      medal = '🥉';
-                    }
-
-                    return (
-                      <tr key={`${standing.player1Id}-${standing.player2Id}`} className={rowClass}>
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          <span className="text-lg font-bold">{medal} {position}</span>
-                          <span className="text-xs text-gray-500 ml-0.5">
-                            {position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
-                          {standing.player1?.name || 'Player 1'} & {standing.player2?.name || 'Player 2'}
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-center text-sm">
-                          <span className="font-medium text-green-600">{standing.matchesWon || 0}</span>
-                          <span className="text-gray-400">-</span>
-                          <span className="text-red-600">{standing.matchesLost || 0}</span>
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-center text-sm">
-                          <span className="text-gray-600">{standing.gamesWon || 0}-{standing.gamesLost || 0}</span>
-                          <span className={`ml-1 text-xs ${gameDiff > 0 ? 'text-green-600' : gameDiff < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                            ({gameDiff > 0 ? '+' : ''}{gameDiff})
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-medium">
-                          {basePoints}
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-center text-sm">
-                          {bonusPoints > 0 ? (
-                            <span className="text-green-600 font-medium">+{bonusPoints}</span>
-                          ) : (
-                            <span className="text-gray-400">0</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-center">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary text-white">
-                            {totalPoints}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
+      
       {/* Show Classification at the top for ROUND_ROBIN and GROUP_STAGE_KNOCKOUT tournaments */}
       {(tournament.type === 'ROUND_ROBIN' || tournament.type === 'GROUP_STAGE_KNOCKOUT') && phase1Standings.length > 0 && (() => {
         const groupNumbers = getGroupNumbers();
@@ -867,6 +790,14 @@ export default function TournamentDetailPage() {
         match={selectedMatch}
         isLoading={submitResultMutation.isPending}
         allowTies={tournament?.allowTies && selectedMatch?.phase === 1}
+      />
+
+      <FinalClassificationModal
+        isOpen={showFinalClassification}
+        onClose={() => setShowFinalClassification(false)}
+        standings={phase1Standings}
+        tournamentName={tournament.name}
+        tournamentType={tournament.type}
       />
     </div>
   );

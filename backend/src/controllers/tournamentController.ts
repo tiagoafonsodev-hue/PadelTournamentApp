@@ -19,6 +19,72 @@ const tournamentSchema = z.object({
   allowTies: z.boolean().optional().default(false),
 });
 
+interface Team {
+  player1Id: string;
+  player2Id: string;
+}
+
+/**
+ * Seed teams based on their combined 2025 tournament points
+ * Uses snake/zigzag distribution for balanced groups
+ */
+async function seedTeamsByPoints(teams: Team[]): Promise<Team[]> {
+  // Get 2025 tournament points for all players
+  const playerIds = teams.flatMap(t => [t.player1Id, t.player2Id]);
+
+  // Get all tournament results from 2025 for these players
+  const tournamentResults = await prisma.tournamentResult.findMany({
+    where: {
+      playerId: { in: playerIds },
+      createdAt: {
+        gte: new Date('2025-01-01'),
+        lt: new Date('2026-01-01'),
+      },
+    },
+  });
+
+  console.log(`[Team Seeding] Found ${tournamentResults.length} tournament results from 2025`);
+
+  // Calculate total 2025 points per player
+  const player2025Points = new Map<string, number>();
+  for (const result of tournamentResults) {
+    const currentPoints = player2025Points.get(result.playerId) || 0;
+    player2025Points.set(result.playerId, currentPoints + result.pointsAwarded + result.bonusPoints);
+  }
+
+  // Get player names for logging
+  const players = await prisma.player.findMany({
+    where: { id: { in: playerIds } },
+    select: { id: true, name: true },
+  });
+  const playerNames = new Map(players.map(p => [p.id, p.name]));
+
+  // Calculate team points (sum of both players' 2025 points)
+  const teamsWithPoints = teams.map((team, index) => {
+    const player1Points = player2025Points.get(team.player1Id) || 0;
+    const player2Points = player2025Points.get(team.player2Id) || 0;
+    const totalPoints = player1Points + player2Points;
+
+    console.log(`[Team Seeding] Team ${index + 1}: ${playerNames.get(team.player1Id)} (${player1Points}) + ${playerNames.get(team.player2Id)} (${player2Points}) = ${totalPoints} pts`);
+
+    return {
+      team,
+      totalPoints,
+    };
+  });
+
+  // Sort teams by total points descending (highest points first)
+  teamsWithPoints.sort((a, b) => b.totalPoints - a.totalPoints);
+
+  console.log('[Team Seeding] Teams sorted by 2025 points (strongest to weakest)');
+  teamsWithPoints.forEach((t, i) => {
+    console.log(`  ${i + 1}. Team with ${t.totalPoints} points`);
+  });
+
+  // Return sorted teams for snake draft distribution
+  return teamsWithPoints.map(t => t.team);
+}
+
 export const createTournament = async (req: AuthRequest, res: Response) => {
   try {
     const data = tournamentSchema.parse(req.body);
@@ -44,6 +110,12 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Ties are not allowed in knockout tournaments' });
     }
 
+    // Reorder teams based on 2025 tournament points for balanced group generation
+    let seededTeams = data.teams;
+    if (data.type === 'GROUP_STAGE_KNOCKOUT') {
+      seededTeams = await seedTeamsByPoints(data.teams);
+    }
+
     // Create tournament
     const tournament = await prisma.tournament.create({
       data: {
@@ -66,14 +138,14 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
       })),
     });
 
-    // Generate matches with manual teams
+    // Generate matches with seeded teams
     let matches;
     if (data.type === 'ROUND_ROBIN') {
-      matches = tournamentScheduler.generateRoundRobinMatches(tournament.id, data.teams);
+      matches = tournamentScheduler.generateRoundRobinMatches(tournament.id, seededTeams);
     } else if (data.type === 'KNOCKOUT') {
-      matches = tournamentScheduler.generateKnockoutMatches(tournament.id, data.teams);
+      matches = tournamentScheduler.generateKnockoutMatches(tournament.id, seededTeams);
     } else {
-      matches = tournamentScheduler.generateGroupStageMatches(tournament.id, data.teams);
+      matches = tournamentScheduler.generateGroupStageMatches(tournament.id, seededTeams);
     }
 
     await prisma.match.createMany({
@@ -206,6 +278,14 @@ export const getTournamentStandings = async (req: AuthRequest, res: Response) =>
         const bGameDiff = (b.gamesWon || 0) - (b.gamesLost || 0);
         return bGameDiff - aGameDiff;
       });
+
+      // Add positions for finished ROUND_ROBIN tournaments
+      if (tournament.status === 'FINISHED' && tournament.type === 'ROUND_ROBIN') {
+        standings = standings.map((s: any, index: number) => ({
+          ...s,
+          position: index + 1,
+        }));
+      }
     }
 
     // If tournament is finished, fetch tournament results with points
