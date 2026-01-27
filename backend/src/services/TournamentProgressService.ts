@@ -1224,8 +1224,8 @@ export class TournamentProgressService {
         matchNumber: matchNumber++,
         player1Id: middleBracket[0].player1Id,  // 2nd best 2nd
         player2Id: middleBracket[0].player2Id,
-        player3Id: middleBracket[2].player1Id,  // Best 3rd
-        player4Id: middleBracket[2].player2Id,
+        player3Id: middleBracket[3].player1Id,  // 2nd best 3rd
+        player4Id: middleBracket[3].player2Id,
         status: MatchStatus.SCHEDULED,
       });
 
@@ -1236,8 +1236,8 @@ export class TournamentProgressService {
         matchNumber: matchNumber++,
         player1Id: middleBracket[1].player1Id,  // Worst 2nd
         player2Id: middleBracket[1].player2Id,
-        player3Id: middleBracket[3].player1Id,  // 2nd best 3rd
-        player4Id: middleBracket[3].player2Id,
+        player3Id: middleBracket[2].player1Id,  // Best 3rd
+        player4Id: middleBracket[2].player2Id,
         status: MatchStatus.SCHEDULED,
       });
 
