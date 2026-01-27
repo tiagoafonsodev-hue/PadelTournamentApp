@@ -34,19 +34,33 @@ export class TournamentProgressService {
 
     if (!tournament) return;
 
+    console.log(`[checkAndAdvancePhase] Start for tournament ${tournamentId}`);
+
     // Check if all matches in current phase are completed
     const currentPhaseMatches = tournament.matches.filter(
       (m: Match) => m.phase === tournament.currentPhase
     );
 
+    console.log(`[checkAndAdvancePhase] Tournament ${tournamentId}, type: ${tournament.type}, currentPhase: ${tournament.currentPhase}`);
+    console.log(`[checkAndAdvancePhase] Current phase matches count: ${currentPhaseMatches.length}`);
+    currentPhaseMatches.forEach(m => console.log(`[checkAndAdvancePhase] Match ${m.id} (Round ${m.roundNumber}, Match ${m.matchNumber}) status: ${m.status}`));
+
+    console.log(`[checkAndAdvancePhase] Tournament ${tournamentId}, type: ${tournament.type}, currentPhase: ${tournament.currentPhase}`);
+    console.log(`[checkAndAdvancePhase] Current phase matches count: ${currentPhaseMatches.length}`);
+
     const allCompleted = currentPhaseMatches.every(
       (m: Match) => m.status === MatchStatus.COMPLETED
     );
 
+    console.log(`[checkAndAdvancePhase] All matches in current phase completed: ${allCompleted}`);
+
     if (!allCompleted) return;
+
+    console.log(`[checkAndAdvancePhase] All matches completed for phase ${tournament.currentPhase}. Advancing phase/finishing tournament.`);
 
     // Determine what to do based on tournament type
     if (tournament.type === 'ROUND_ROBIN') {
+      console.log(`[checkAndAdvancePhase] Round Robin tournament. Marking as FINISHED.`);
       // Round Robin is single phase - mark as finished
       await prisma.tournament.update({
         where: { id: tournamentId },
@@ -55,6 +69,7 @@ export class TournamentProgressService {
           finishedAt: new Date(),
         },
       });
+      console.log(`[checkAndAdvancePhase] Tournament ${tournamentId} status updated to FINISHED.`);
       // Update player tournament stats
       await this.updateTournamentStats(tournamentId);
     } else if (tournament.type === 'KNOCKOUT') {
@@ -1002,7 +1017,7 @@ export class TournamentProgressService {
         status: MatchStatus.SCHEDULED,
       });
 
-      // Semi-finals for 3rd place (Round 1): 3A vs 4B, 4A vs 3B
+      // Semi-finals for 5th-8th place (Round 1): 3A vs 4B, 3B vs 4A
       playoffMatches.push({
         tournamentId: tournament.id,
         phase: 2,
@@ -1020,10 +1035,10 @@ export class TournamentProgressService {
         phase: 2,
         roundNumber: 1,
         matchNumber: matchNumber++,
-        player1Id: group1[3].player1Id,  // 4th from Group A
-        player2Id: group1[3].player2Id,
-        player3Id: group2[2].player1Id,  // 3rd from Group B
-        player4Id: group2[2].player2Id,
+        player1Id: group2[2].player1Id,  // 3rd from Group B
+        player2Id: group2[2].player2Id,
+        player3Id: group1[3].player1Id,  // 4th from Group A
+        player4Id: group1[3].player2Id,
         status: MatchStatus.SCHEDULED,
       });
 
@@ -1124,6 +1139,7 @@ export class TournamentProgressService {
    * Build standings from matches
    */
   private buildStandingsFromMatches(matches: Match[]): TeamStanding[] {
+    console.log(`[buildStandingsFromMatches] Building standings from ${matches.length} matches.`);
 
     // Build team standings map
     const standingsMap = new Map<string, TeamStanding>();
