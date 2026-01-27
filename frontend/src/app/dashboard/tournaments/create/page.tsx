@@ -166,7 +166,7 @@ export default function CreateTournamentPage() {
   if (step === 1) {
     return (
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-semibold text-gray-900 mb-6">
             Create Tournament - Step 1: Select Category
           </h1>
@@ -222,7 +222,7 @@ export default function CreateTournamentPage() {
 
     return (
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">
             Create Tournament - Step 2: Basic Info
           </h1>

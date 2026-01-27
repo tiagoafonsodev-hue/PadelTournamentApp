@@ -100,12 +100,127 @@ export const KnockoutBracket = ({ matches, onMatchClick, tournamentType }: Knock
 
   if (tournamentType === 'GROUP_STAGE_KNOCKOUT' && matches.some(m => m.phase === 2)) {
     // GROUP_STAGE_KNOCKOUT Phase 2 bracket
-    // Open1000: 2 rounds only - Semi-finals and Finals
-    // Round 1: SF (matches 1-4), Round 2: Finals (matches 5-8)
-    const has8TeamPlayoff = phase2Round1.length >= 4;
+    const has12TeamPlayoff = phase2Round1.length === 6;  // Masters: 6 SF matches
+    const has8TeamPlayoff = phase2Round1.length === 4;   // Open1000: 4 SF matches
 
+    // Masters format: 3 brackets (Winners, Middle, Consolation)
+    if (has12TeamPlayoff) {
+      // Round 1 - Semi-finals (6 matches)
+      const winnersSf1 = phase2Round1.find(m => m.matchNumber === 1);
+      const winnersSf2 = phase2Round1.find(m => m.matchNumber === 2);
+      const middleSf1 = phase2Round1.find(m => m.matchNumber === 3);
+      const middleSf2 = phase2Round1.find(m => m.matchNumber === 4);
+      const consolationSf1 = phase2Round1.find(m => m.matchNumber === 5);
+      const consolationSf2 = phase2Round1.find(m => m.matchNumber === 6);
+
+      // Round 2 - Finals (6 matches)
+      const final = phase2Round2.find(m => m.matchNumber === 7);
+      const thirdPlace = phase2Round2.find(m => m.matchNumber === 8);
+      const fifthPlace = phase2Round2.find(m => m.matchNumber === 9);
+      const seventhPlace = phase2Round2.find(m => m.matchNumber === 10);
+      const ninthPlace = phase2Round2.find(m => m.matchNumber === 11);
+      const eleventhPlace = phase2Round2.find(m => m.matchNumber === 12);
+
+      return (
+        <div className="space-y-8" id="phase-2-section">
+          {/* Winners Bracket */}
+          <div className="bg-gradient-to-r from-green-50 to-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-green-500"></span>
+              Winners Bracket (1st-4th)
+            </h3>
+            <div className="overflow-x-auto">
+              <div className="flex gap-6 min-w-max items-start">
+                <div className="w-52">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 text-center">Semi-finals</h4>
+                  <div className="space-y-3">
+                    <MatchCard match={winnersSf1 || null} label="SF 1" onMatchClick={onMatchClick} />
+                    <MatchCard match={winnersSf2 || null} label="SF 2" onMatchClick={onMatchClick} />
+                  </div>
+                </div>
+                <div className="flex flex-col justify-center h-full pt-12">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+                <div className="w-52">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 text-center">Finals</h4>
+                  <div className="space-y-3">
+                    <MatchCard match={final || null} label="Final (1st/2nd)" onMatchClick={onMatchClick} />
+                    <MatchCard match={thirdPlace || null} label="3rd/4th Place" onMatchClick={onMatchClick} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle Bracket */}
+          <div className="bg-gradient-to-r from-blue-50 to-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+              Middle Bracket (5th-8th)
+            </h3>
+            <div className="overflow-x-auto">
+              <div className="flex gap-6 min-w-max items-start">
+                <div className="w-52">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 text-center">Semi-finals</h4>
+                  <div className="space-y-3">
+                    <MatchCard match={middleSf1 || null} label="SF 1" onMatchClick={onMatchClick} />
+                    <MatchCard match={middleSf2 || null} label="SF 2" onMatchClick={onMatchClick} />
+                  </div>
+                </div>
+                <div className="flex flex-col justify-center h-full pt-12">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+                <div className="w-52">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 text-center">Finals</h4>
+                  <div className="space-y-3">
+                    <MatchCard match={fifthPlace || null} label="5th/6th Place" onMatchClick={onMatchClick} />
+                    <MatchCard match={seventhPlace || null} label="7th/8th Place" onMatchClick={onMatchClick} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Consolation Bracket */}
+          <div className="bg-gradient-to-r from-orange-50 to-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+              Consolation Bracket (9th-12th)
+            </h3>
+            <div className="overflow-x-auto">
+              <div className="flex gap-6 min-w-max items-start">
+                <div className="w-52">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 text-center">Semi-finals</h4>
+                  <div className="space-y-3">
+                    <MatchCard match={consolationSf1 || null} label="SF 1" onMatchClick={onMatchClick} />
+                    <MatchCard match={consolationSf2 || null} label="SF 2" onMatchClick={onMatchClick} />
+                  </div>
+                </div>
+                <div className="flex flex-col justify-center h-full pt-12">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+                <div className="w-52">
+                  <h4 className="text-sm font-medium text-gray-600 mb-3 text-center">Finals</h4>
+                  <div className="space-y-3">
+                    <MatchCard match={ninthPlace || null} label="9th/10th Place" onMatchClick={onMatchClick} />
+                    <MatchCard match={eleventhPlace || null} label="11th/12th Place" onMatchClick={onMatchClick} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Open1000 format: 2 brackets (Winners, Consolation)
     if (has8TeamPlayoff) {
-      // 8-team playoff: SF + Finals structure (2 rounds)
       // Round 1 - Semi-finals: Top bracket (1A vs 2B, 2A vs 1B) + Consolation (3A vs 4B, 3B vs 4A)
       const sf1 = phase2Round1.find(m => m.matchNumber === 1);  // 1A vs 2B
       const sf2 = phase2Round1.find(m => m.matchNumber === 2);  // 2A vs 1B
@@ -124,7 +239,7 @@ export const KnockoutBracket = ({ matches, onMatchClick, tournamentType }: Knock
           <div className="bg-gradient-to-r from-green-50 to-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-green-500"></span>
-              Phase 2 - Winners Bracket (1st-4th)
+              Winners Bracket (1st-4th)
             </h3>
 
             <div className="overflow-x-auto">

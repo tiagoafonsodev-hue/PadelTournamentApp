@@ -8,6 +8,8 @@ import {
   updatePlayer,
   deletePlayer,
   getLeaderboard,
+  resetLeaderboard,
+  resetPlayerStats,
 } from '../controllers/playerController';
 import { importPlayers, getPlayerTemplate } from '../controllers/importController';
 
@@ -48,6 +50,8 @@ router.put('/:id', updatePlayer);
 // Admin-only routes
 router.post('/', adminMiddleware, createPlayer);
 router.delete('/:id', adminMiddleware, deletePlayer);
+router.post('/reset-leaderboard', adminMiddleware, resetLeaderboard);
+router.post('/reset-stats', adminMiddleware, resetPlayerStats);
 
 // Import routes (admin only)
 router.get('/template', adminMiddleware, getPlayerTemplate);

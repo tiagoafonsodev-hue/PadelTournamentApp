@@ -62,7 +62,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tiebreakers' | 'points'>('points');
+  const [activeTab, setActiveTab] = useState<'tiebreakers' | 'points' | 'data'>('points');
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     // Load tiebreaker settings from localStorage
@@ -173,12 +174,22 @@ export default function SettingsPage() {
           >
             Tiebreaker Rules
           </button>
+          <button
+            onClick={() => setActiveTab('data')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'data'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Data Management
+          </button>
         </nav>
       </div>
 
       {/* Tournament Points Tab */}
       {activeTab === 'points' && (
-        <div className="bg-white shadow rounded-lg p-6 max-w-4xl">
+        <div className="bg-white shadow rounded-lg p-6 max-w-6xl">
           <h2 className="text-lg font-medium text-gray-900 mb-2">
             Tournament Point Configuration
           </h2>
@@ -276,7 +287,7 @@ export default function SettingsPage() {
 
       {/* Tiebreaker Rules Tab */}
       {activeTab === 'tiebreakers' && (
-        <div className="bg-white shadow rounded-lg p-6 max-w-2xl">
+        <div className="bg-white shadow rounded-lg p-6 max-w-4xl">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Tiebreaker Rules for Round Robin Tournaments
           </h2>
@@ -373,6 +384,83 @@ export default function SettingsPage() {
             <p className="text-sm text-blue-800">
               <strong>Note:</strong> These settings apply to Round Robin and Group Stage
               tournaments. Knockout tournaments use match results to determine final positions.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Data Management Tab */}
+      {activeTab === 'data' && (
+        <div className="bg-white shadow rounded-lg p-6 max-w-4xl">
+          <h2 className="text-lg font-medium text-gray-900 mb-2">
+            Data Management
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Reset leaderboard rankings and player statistics. These actions cannot be undone.
+          </p>
+
+          <div className="space-y-6">
+            {/* Reset Leaderboard */}
+            <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+              <h3 className="text-sm font-medium text-yellow-900 mb-2">Reset Leaderboard</h3>
+              <p className="text-sm text-yellow-800 mb-4">
+                This will clear all tournament results and reset tournament points to zero for all players.
+                Player match statistics (wins, losses, games) will be preserved.
+              </p>
+              <button
+                onClick={async () => {
+                  if (!confirm('Are you sure you want to reset the leaderboard? This cannot be undone.')) return;
+                  setResetting(true);
+                  try {
+                    await apiClient.post('/api/players/reset-leaderboard');
+                    alert('Leaderboard reset successfully!');
+                  } catch (error) {
+                    alert('Failed to reset leaderboard');
+                  } finally {
+                    setResetting(false);
+                  }
+                }}
+                disabled={resetting}
+                className="px-4 py-2 text-sm font-medium text-yellow-900 bg-yellow-200 rounded-md hover:bg-yellow-300 disabled:opacity-50"
+              >
+                {resetting ? 'Resetting...' : 'Reset Leaderboard'}
+              </button>
+            </div>
+
+            {/* Reset Player Stats */}
+            <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
+              <h3 className="text-sm font-medium text-red-900 mb-2">Reset All Player Stats</h3>
+              <p className="text-sm text-red-800 mb-4">
+                This will reset ALL player statistics to zero, including matches played, wins, losses,
+                sets, games, and tournament points. All tournament results will also be deleted.
+              </p>
+              <button
+                onClick={async () => {
+                  if (!confirm('Are you sure you want to reset ALL player stats? This will clear everything and cannot be undone.')) return;
+                  setResetting(true);
+                  try {
+                    await apiClient.post('/api/players/reset-stats');
+                    alert('Player stats reset successfully!');
+                  } catch (error) {
+                    alert('Failed to reset player stats');
+                  } finally {
+                    setResetting(false);
+                  }
+                }}
+                disabled={resetting}
+                className="px-4 py-2 text-sm font-medium text-red-900 bg-red-200 rounded-md hover:bg-red-300 disabled:opacity-50"
+              >
+                {resetting ? 'Resetting...' : 'Reset All Player Stats'}
+              </button>
+            </div>
+          </div>
+
+          {/* Warning */}
+          <div className="mt-6 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-900 mb-2">Warning</h3>
+            <p className="text-sm text-gray-700">
+              These operations are irreversible. Make sure you have a backup of your data before proceeding.
+              Tournament data (matches, scores) is not affected by these resets.
             </p>
           </div>
         </div>

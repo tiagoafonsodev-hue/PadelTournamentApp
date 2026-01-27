@@ -680,11 +680,15 @@ export class TournamentProgressService {
   /**
    * Generate Multi-Group Round 2 matches (Finals for all positions)
    * Called after Round 1 (semi-finals) of Phase 2 completes
-   * Creates:
-   * - Final (1st/2nd): Winners of Match 1 vs Match 2
-   * - 3rd/4th place: Losers of Match 1 vs Match 2
-   * - 5th/6th place: Winners of Match 3 vs Match 4
-   * - 7th/8th place: Losers of Match 3 vs Match 4
+   *
+   * For 2 groups (Open1000 - 4 SF matches):
+   * - Match 5: Final (1st/2nd), Match 6: 3rd/4th
+   * - Match 7: 5th/6th, Match 8: 7th/8th
+   *
+   * For 3 groups (Masters - 6 SF matches):
+   * - Match 7-8: Winners bracket finals (1st-4th)
+   * - Match 9-10: Middle bracket finals (5th-8th)
+   * - Match 11-12: Consolation bracket finals (9th-12th)
    */
   private async generateMultiGroupRound2(
     tournamentId: string,
@@ -693,114 +697,168 @@ export class TournamentProgressService {
     console.log(`[generateMultiGroupRound2] Starting Round 2 generation for tournament ${tournamentId}`);
     console.log(`[generateMultiGroupRound2] Round 1 matches count: ${round1Matches.length}`);
 
-    // Round 1 should have 4 matches (2 for top bracket, 2 for bottom bracket)
-    if (round1Matches.length < 4) {
-      console.error('[generateMultiGroupRound2] Not enough Round 1 matches to generate Round 2');
-      return;
-    }
-
     // Sort by match number to ensure correct order
     round1Matches.sort((a, b) => a.matchNumber - b.matchNumber);
     console.log(`[generateMultiGroupRound2] Match numbers: ${round1Matches.map(m => m.matchNumber).join(', ')}`);
 
-    // Top bracket semi-finals (Match 1 and 2)
-    const topSemi1 = round1Matches[0];
-    const topSemi2 = round1Matches[1];
+    // Helper to extract winner/loser from a match
+    const getWinner = (match: Match) => match.winnerTeam === 1
+      ? { player1Id: match.player1Id, player2Id: match.player2Id }
+      : { player1Id: match.player3Id, player2Id: match.player4Id };
 
-    // Bottom bracket semi-finals (Match 3 and 4)
-    const bottomSemi1 = round1Matches[2];
-    const bottomSemi2 = round1Matches[3];
+    const getLoser = (match: Match) => match.winnerTeam === 1
+      ? { player1Id: match.player3Id, player2Id: match.player4Id }
+      : { player1Id: match.player1Id, player2Id: match.player2Id };
 
-    // Extract winners and losers from top bracket
-    const topSemi1Winner = topSemi1.winnerTeam === 1
-      ? { player1Id: topSemi1.player1Id, player2Id: topSemi1.player2Id }
-      : { player1Id: topSemi1.player3Id, player2Id: topSemi1.player4Id };
+    const round2Matches: any[] = [];
 
-    const topSemi1Loser = topSemi1.winnerTeam === 1
-      ? { player1Id: topSemi1.player3Id, player2Id: topSemi1.player4Id }
-      : { player1Id: topSemi1.player1Id, player2Id: topSemi1.player2Id };
+    // Masters format: 6 SF matches → 6 Finals
+    if (round1Matches.length === 6) {
+      // Winners bracket SF (Matches 1-2)
+      const winnersSf1 = round1Matches[0];
+      const winnersSf2 = round1Matches[1];
+      // Middle bracket SF (Matches 3-4)
+      const middleSf1 = round1Matches[2];
+      const middleSf2 = round1Matches[3];
+      // Consolation bracket SF (Matches 5-6)
+      const consolationSf1 = round1Matches[4];
+      const consolationSf2 = round1Matches[5];
 
-    const topSemi2Winner = topSemi2.winnerTeam === 1
-      ? { player1Id: topSemi2.player1Id, player2Id: topSemi2.player2Id }
-      : { player1Id: topSemi2.player3Id, player2Id: topSemi2.player4Id };
-
-    const topSemi2Loser = topSemi2.winnerTeam === 1
-      ? { player1Id: topSemi2.player3Id, player2Id: topSemi2.player4Id }
-      : { player1Id: topSemi2.player1Id, player2Id: topSemi2.player2Id };
-
-    // Extract winners and losers from bottom bracket
-    const bottomSemi1Winner = bottomSemi1.winnerTeam === 1
-      ? { player1Id: bottomSemi1.player1Id, player2Id: bottomSemi1.player2Id }
-      : { player1Id: bottomSemi1.player3Id, player2Id: bottomSemi1.player4Id };
-
-    const bottomSemi1Loser = bottomSemi1.winnerTeam === 1
-      ? { player1Id: bottomSemi1.player3Id, player2Id: bottomSemi1.player4Id }
-      : { player1Id: bottomSemi1.player1Id, player2Id: bottomSemi1.player2Id };
-
-    const bottomSemi2Winner = bottomSemi2.winnerTeam === 1
-      ? { player1Id: bottomSemi2.player1Id, player2Id: bottomSemi2.player2Id }
-      : { player1Id: bottomSemi2.player3Id, player2Id: bottomSemi2.player4Id };
-
-    const bottomSemi2Loser = bottomSemi2.winnerTeam === 1
-      ? { player1Id: bottomSemi2.player3Id, player2Id: bottomSemi2.player4Id }
-      : { player1Id: bottomSemi2.player1Id, player2Id: bottomSemi2.player2Id };
-
-    // Create Round 2 matches
-    const round2Matches = [
-      // Match 5: Final (1st/2nd place) - Winners of top bracket semi-finals
-      {
-        tournamentId,
-        phase: 2,
-        roundNumber: 2,
-        matchNumber: 5,
-        player1Id: topSemi1Winner.player1Id,
-        player2Id: topSemi1Winner.player2Id,
-        player3Id: topSemi2Winner.player1Id,
-        player4Id: topSemi2Winner.player2Id,
-        status: MatchStatus.SCHEDULED,
-      },
-      // Match 6: 3rd/4th place - Losers of top bracket semi-finals
-      {
-        tournamentId,
-        phase: 2,
-        roundNumber: 2,
-        matchNumber: 6,
-        player1Id: topSemi1Loser.player1Id,
-        player2Id: topSemi1Loser.player2Id,
-        player3Id: topSemi2Loser.player1Id,
-        player4Id: topSemi2Loser.player2Id,
-        status: MatchStatus.SCHEDULED,
-      },
-      // Match 7: 5th/6th place - Winners of bottom bracket semi-finals
-      {
+      // Winners Bracket Finals (Match 7-8)
+      round2Matches.push({
         tournamentId,
         phase: 2,
         roundNumber: 2,
         matchNumber: 7,
-        player1Id: bottomSemi1Winner.player1Id,
-        player2Id: bottomSemi1Winner.player2Id,
-        player3Id: bottomSemi2Winner.player1Id,
-        player4Id: bottomSemi2Winner.player2Id,
+        player1Id: getWinner(winnersSf1).player1Id,
+        player2Id: getWinner(winnersSf1).player2Id,
+        player3Id: getWinner(winnersSf2).player1Id,
+        player4Id: getWinner(winnersSf2).player2Id,
         status: MatchStatus.SCHEDULED,
-      },
-      // Match 8: 7th/8th place - Losers of bottom bracket semi-finals
-      {
+      });
+      round2Matches.push({
         tournamentId,
         phase: 2,
         roundNumber: 2,
         matchNumber: 8,
-        player1Id: bottomSemi1Loser.player1Id,
-        player2Id: bottomSemi1Loser.player2Id,
-        player3Id: bottomSemi2Loser.player1Id,
-        player4Id: bottomSemi2Loser.player2Id,
+        player1Id: getLoser(winnersSf1).player1Id,
+        player2Id: getLoser(winnersSf1).player2Id,
+        player3Id: getLoser(winnersSf2).player1Id,
+        player4Id: getLoser(winnersSf2).player2Id,
         status: MatchStatus.SCHEDULED,
-      },
-    ];
+      });
+
+      // Middle Bracket Finals (Match 9-10)
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 9,
+        player1Id: getWinner(middleSf1).player1Id,
+        player2Id: getWinner(middleSf1).player2Id,
+        player3Id: getWinner(middleSf2).player1Id,
+        player4Id: getWinner(middleSf2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 10,
+        player1Id: getLoser(middleSf1).player1Id,
+        player2Id: getLoser(middleSf1).player2Id,
+        player3Id: getLoser(middleSf2).player1Id,
+        player4Id: getLoser(middleSf2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+
+      // Consolation Bracket Finals (Match 11-12)
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 11,
+        player1Id: getWinner(consolationSf1).player1Id,
+        player2Id: getWinner(consolationSf1).player2Id,
+        player3Id: getWinner(consolationSf2).player1Id,
+        player4Id: getWinner(consolationSf2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 12,
+        player1Id: getLoser(consolationSf1).player1Id,
+        player2Id: getLoser(consolationSf1).player2Id,
+        player3Id: getLoser(consolationSf2).player1Id,
+        player4Id: getLoser(consolationSf2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+    }
+    // Open1000 format: 4 SF matches → 4 Finals
+    else if (round1Matches.length >= 4) {
+      // Top bracket semi-finals (Match 1 and 2)
+      const topSemi1 = round1Matches[0];
+      const topSemi2 = round1Matches[1];
+      // Bottom bracket semi-finals (Match 3 and 4)
+      const bottomSemi1 = round1Matches[2];
+      const bottomSemi2 = round1Matches[3];
+
+      // Match 5: Final (1st/2nd place)
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 5,
+        player1Id: getWinner(topSemi1).player1Id,
+        player2Id: getWinner(topSemi1).player2Id,
+        player3Id: getWinner(topSemi2).player1Id,
+        player4Id: getWinner(topSemi2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+      // Match 6: 3rd/4th place
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 6,
+        player1Id: getLoser(topSemi1).player1Id,
+        player2Id: getLoser(topSemi1).player2Id,
+        player3Id: getLoser(topSemi2).player1Id,
+        player4Id: getLoser(topSemi2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+      // Match 7: 5th/6th place
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 7,
+        player1Id: getWinner(bottomSemi1).player1Id,
+        player2Id: getWinner(bottomSemi1).player2Id,
+        player3Id: getWinner(bottomSemi2).player1Id,
+        player4Id: getWinner(bottomSemi2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+      // Match 8: 7th/8th place
+      round2Matches.push({
+        tournamentId,
+        phase: 2,
+        roundNumber: 2,
+        matchNumber: 8,
+        player1Id: getLoser(bottomSemi1).player1Id,
+        player2Id: getLoser(bottomSemi1).player2Id,
+        player3Id: getLoser(bottomSemi2).player1Id,
+        player4Id: getLoser(bottomSemi2).player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+    } else {
+      console.error('[generateMultiGroupRound2] Not enough Round 1 matches to generate Round 2');
+      return;
+    }
 
     console.log(`[generateMultiGroupRound2] Creating ${round2Matches.length} Round 2 matches...`);
-    console.log(`[generateMultiGroupRound2] Match details:`, round2Matches.map(m =>
-      `Match ${m.matchNumber} (Round ${m.roundNumber})`
-    ).join(', '));
 
     // Create matches in database
     await prisma.match.createMany({
@@ -1044,24 +1102,77 @@ export class TournamentProgressService {
 
       // Note: Round 2 (finals) will be generated after Round 1 completes
     }
-    // For 3 groups (24 players): more complex bracket
+    // For 3 groups (24 players / 12 teams): 3 brackets with SF + Finals each
+    // Masters format: Winners (1st-4th), Middle (5th-8th), Consolation (9th-12th)
     else if (groupNumbers.length === 3) {
-      // Simplified: top 2 from each group (6 teams) could create a more complex bracket
-      // For now, use similar cross logic
-      const group1 = groupStandings.get(1)!;
-      const group2 = groupStandings.get(2)!;
-      const group3 = groupStandings.get(3)!;
+      const group1 = groupStandings.get(1)!;  // Group A
+      const group2 = groupStandings.get(2)!;  // Group B
+      const group3 = groupStandings.get(3)!;  // Group C
 
-      // Create matches crossing groups (this is a simplified version)
+      // Helper to compare teams by points, set diff, game diff
+      const compareTeams = (a: TeamStanding, b: TeamStanding) => {
+        if (b.points !== a.points) return b.points - a.points;
+        const aSetDiff = a.setsWon - a.setsLost;
+        const bSetDiff = b.setsWon - b.setsLost;
+        if (bSetDiff !== aSetDiff) return bSetDiff - aSetDiff;
+        const aGameDiff = a.gamesWon - a.gamesLost;
+        const bGameDiff = b.gamesWon - b.gamesLost;
+        return bGameDiff - aGameDiff;
+      };
+
+      // Collect all 2nds, 3rds, and 4ths with group identifier
+      const allSeconds = [
+        { ...group1[1], group: 1 },
+        { ...group2[1], group: 2 },
+        { ...group3[1], group: 3 },
+      ].sort(compareTeams);
+
+      const allThirds = [
+        { ...group1[2], group: 1 },
+        { ...group2[2], group: 2 },
+        { ...group3[2], group: 3 },
+      ].sort(compareTeams);
+
+      const allFourths = [
+        { ...group1[3], group: 1 },
+        { ...group2[3], group: 2 },
+        { ...group3[3], group: 3 },
+      ].sort(compareTeams);
+
+      // Winners Bracket (1st-4th): 1A, 1B, 1C + best 2nd
+      const winnersBracket = [
+        group1[0],  // 1A
+        group2[0],  // 1B
+        group3[0],  // 1C
+        allSeconds[0],  // Best 2nd
+      ];
+
+      // Middle Bracket (5th-8th): 2 remaining 2nds + 2 best 3rds
+      const middleBracket = [
+        allSeconds[1],  // 2nd best 2nd
+        allSeconds[2],  // 3rd best 2nd (worst)
+        allThirds[0],   // Best 3rd
+        allThirds[1],   // 2nd best 3rd
+      ];
+
+      // Consolation Bracket (9th-12th): worst 3rd + all 4ths
+      const consolationBracket = [
+        allThirds[2],   // Worst 3rd
+        allFourths[0],  // Best 4th
+        allFourths[1],  // 2nd best 4th
+        allFourths[2],  // Worst 4th
+      ];
+
+      // Winners Bracket SF (Round 1, Matches 1-2)
       playoffMatches.push({
         tournamentId: tournament.id,
         phase: 2,
         roundNumber: 1,
         matchNumber: matchNumber++,
-        player1Id: group1[0].player1Id,
-        player2Id: group1[0].player2Id,
-        player3Id: group2[1].player1Id,
-        player4Id: group2[1].player2Id,
+        player1Id: winnersBracket[0].player1Id,  // 1A
+        player2Id: winnersBracket[0].player2Id,
+        player3Id: winnersBracket[3].player1Id,  // Best 2nd
+        player4Id: winnersBracket[3].player2Id,
         status: MatchStatus.SCHEDULED,
       });
 
@@ -1070,12 +1181,64 @@ export class TournamentProgressService {
         phase: 2,
         roundNumber: 1,
         matchNumber: matchNumber++,
-        player1Id: group2[0].player1Id,
-        player2Id: group2[0].player2Id,
-        player3Id: group3[1].player1Id,
-        player4Id: group3[1].player2Id,
+        player1Id: winnersBracket[1].player1Id,  // 1B
+        player2Id: winnersBracket[1].player2Id,
+        player3Id: winnersBracket[2].player1Id,  // 1C
+        player4Id: winnersBracket[2].player2Id,
         status: MatchStatus.SCHEDULED,
       });
+
+      // Middle Bracket SF (Round 1, Matches 3-4)
+      playoffMatches.push({
+        tournamentId: tournament.id,
+        phase: 2,
+        roundNumber: 1,
+        matchNumber: matchNumber++,
+        player1Id: middleBracket[0].player1Id,  // 2nd best 2nd
+        player2Id: middleBracket[0].player2Id,
+        player3Id: middleBracket[2].player1Id,  // Best 3rd
+        player4Id: middleBracket[2].player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+
+      playoffMatches.push({
+        tournamentId: tournament.id,
+        phase: 2,
+        roundNumber: 1,
+        matchNumber: matchNumber++,
+        player1Id: middleBracket[1].player1Id,  // Worst 2nd
+        player2Id: middleBracket[1].player2Id,
+        player3Id: middleBracket[3].player1Id,  // 2nd best 3rd
+        player4Id: middleBracket[3].player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+
+      // Consolation Bracket SF (Round 1, Matches 5-6)
+      playoffMatches.push({
+        tournamentId: tournament.id,
+        phase: 2,
+        roundNumber: 1,
+        matchNumber: matchNumber++,
+        player1Id: consolationBracket[0].player1Id,  // Worst 3rd
+        player2Id: consolationBracket[0].player2Id,
+        player3Id: consolationBracket[1].player1Id,  // Best 4th
+        player4Id: consolationBracket[1].player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+
+      playoffMatches.push({
+        tournamentId: tournament.id,
+        phase: 2,
+        roundNumber: 1,
+        matchNumber: matchNumber++,
+        player1Id: consolationBracket[2].player1Id,  // 2nd best 4th
+        player2Id: consolationBracket[2].player2Id,
+        player3Id: consolationBracket[3].player1Id,  // Worst 4th
+        player4Id: consolationBracket[3].player2Id,
+        status: MatchStatus.SCHEDULED,
+      });
+
+      // Note: Round 2 (finals for each bracket) will be generated after Round 1 completes
     }
 
     // Create matches

@@ -180,3 +180,50 @@ export const getPlayer = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// Admin only: Reset leaderboard (clear tournament results and points)
+export const resetLeaderboard = async (req: AuthRequest, res: Response) => {
+  try {
+    // Delete all tournament results
+    await prisma.tournamentResult.deleteMany({});
+
+    // Reset tournament points for all players
+    await prisma.playerStats.updateMany({
+      data: {
+        tournamentPoints: 0,
+      },
+    });
+
+    res.json({ message: 'Leaderboard reset successfully' });
+  } catch (error) {
+    console.error('Error resetting leaderboard:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Admin only: Reset all player stats
+export const resetPlayerStats = async (req: AuthRequest, res: Response) => {
+  try {
+    // Reset all player stats to zero
+    await prisma.playerStats.updateMany({
+      data: {
+        matchesPlayed: 0,
+        matchesWon: 0,
+        matchesLost: 0,
+        setsWon: 0,
+        setsLost: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        tournamentPoints: 0,
+      },
+    });
+
+    // Delete all tournament results
+    await prisma.tournamentResult.deleteMany({});
+
+    res.json({ message: 'Player stats reset successfully' });
+  } catch (error) {
+    console.error('Error resetting player stats:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
