@@ -4,6 +4,8 @@ import {
   getPointConfigurations,
   getPointConfiguration,
   savePointConfiguration,
+  getTiebreakerSettings,
+  saveTiebreakerSettings,
 } from '../controllers/settingsController';
 
 const router = Router();
@@ -20,5 +22,9 @@ router.get('/points/:category', getPointConfiguration);
 
 // Save point configuration for a category
 router.post('/points', savePointConfiguration);
+
+// Tiebreaker settings
+router.get('/tiebreakers', getTiebreakerSettings);
+router.post('/tiebreakers', saveTiebreakerSettings);
 
 export default router;

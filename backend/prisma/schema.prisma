@@ -210,3 +210,18 @@ model TournamentResult {
   @@index([playerId])
   @@map("tournament_results")
 }
+
+// User settings for tiebreakers and scoring
+model UserSettings {
+  id                  String   @id @default(uuid())
+  userId              String   @unique @map("user_id")
+  tiebreakerPrimary   String   @default("setDiff") @map("tiebreaker_primary")
+  tiebreakerSecondary String   @default("gameDiff") @map("tiebreaker_secondary")
+  tiebreakerTertiary  String   @default("gamesWon") @map("tiebreaker_tertiary")
+  pointsPerWin        Int      @default(2) @map("points_per_win")
+  pointsPerDraw       Int      @default(1) @map("points_per_draw")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}

@@ -3,11 +3,21 @@ import { TournamentCategory } from '@prisma/client';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
 import { tournamentPointService } from '../services/TournamentPointService';
+import prisma from '../lib/prisma';
 
 // Schema for updating point configuration
 const pointConfigSchema = z.object({
   category: z.enum(['OPEN_250', 'OPEN_500', 'OPEN_1000', 'MASTERS']),
   points: z.record(z.string(), z.number().min(0)),
+});
+
+// Schema for tiebreaker settings
+const tiebreakerSettingsSchema = z.object({
+  primary: z.string(),
+  secondary: z.string(),
+  tertiary: z.string(),
+  pointsPerWin: z.number().min(1).max(10),
+  pointsPerDraw: z.number().min(0).max(10),
 });
 
 /**
@@ -69,6 +79,75 @@ export const savePointConfiguration = async (req: AuthRequest, res: Response) =>
     );
 
     res.json({ message: 'Configuration saved successfully' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+/**
+ * Get tiebreaker settings
+ */
+export const getTiebreakerSettings = async (req: AuthRequest, res: Response) => {
+  try {
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId: req.userId! },
+    });
+
+    if (!settings) {
+      // Return defaults
+      return res.json({
+        primary: 'setDiff',
+        secondary: 'gameDiff',
+        tertiary: 'gamesWon',
+        pointsPerWin: 2,
+        pointsPerDraw: 1,
+      });
+    }
+
+    res.json({
+      primary: settings.tiebreakerPrimary,
+      secondary: settings.tiebreakerSecondary,
+      tertiary: settings.tiebreakerTertiary,
+      pointsPerWin: settings.pointsPerWin,
+      pointsPerDraw: settings.pointsPerDraw,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+/**
+ * Save tiebreaker settings
+ */
+export const saveTiebreakerSettings = async (req: AuthRequest, res: Response) => {
+  try {
+    const data = tiebreakerSettingsSchema.parse(req.body);
+
+    await prisma.userSettings.upsert({
+      where: { userId: req.userId! },
+      update: {
+        tiebreakerPrimary: data.primary,
+        tiebreakerSecondary: data.secondary,
+        tiebreakerTertiary: data.tertiary,
+        pointsPerWin: data.pointsPerWin,
+        pointsPerDraw: data.pointsPerDraw,
+      },
+      create: {
+        userId: req.userId!,
+        tiebreakerPrimary: data.primary,
+        tiebreakerSecondary: data.secondary,
+        tiebreakerTertiary: data.tertiary,
+        pointsPerWin: data.pointsPerWin,
+        pointsPerDraw: data.pointsPerDraw,
+      },
+    });
+
+    res.json({ message: 'Tiebreaker settings saved successfully' });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });

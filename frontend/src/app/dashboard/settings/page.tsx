@@ -8,17 +8,21 @@ interface TiebreakerSettings {
   primary: string;
   secondary: string;
   tertiary: string;
+  pointsPerWin: number;
+  pointsPerDraw: number;
 }
 
 type PointConfigurations = Record<TournamentCategory, Record<number, number>>;
 
+// Points is NOT a tiebreaker - it's the primary sorting method
+// Tiebreakers are used when teams have EQUAL points
 const TIEBREAKER_OPTIONS = [
-  { value: 'points', label: 'Points (2 per win)' },
-  { value: 'wins', label: 'Number of wins' },
-  { value: 'goalDiff', label: 'Goal difference (games won - games lost)' },
+  { value: 'setDiff', label: 'Set difference (sets won - sets lost)' },
+  { value: 'gameDiff', label: 'Game difference (games won - games lost)' },
+  { value: 'setsWon', label: 'Total sets won' },
   { value: 'gamesWon', label: 'Total games won' },
-  { value: 'gamesLost', label: 'Total games lost (fewer is better)' },
   { value: 'headToHead', label: 'Head-to-head result' },
+  { value: 'gamesLost', label: 'Total games lost (fewer is better)' },
 ];
 
 const CATEGORY_LABELS: Record<TournamentCategory, string> = {
@@ -53,9 +57,11 @@ const POSITIONS_PER_CATEGORY: Record<TournamentCategory, number[]> = {
 
 export default function SettingsPage() {
   const [tiebreakers, setTiebreakers] = useState<TiebreakerSettings>({
-    primary: 'points',
-    secondary: 'goalDiff',
+    primary: 'setDiff',
+    secondary: 'gameDiff',
     tertiary: 'gamesWon',
+    pointsPerWin: 2,
+    pointsPerDraw: 1,
   });
   const [pointConfigs, setPointConfigs] = useState<PointConfigurations | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<TournamentCategory>(TournamentCategory.OPEN_250);
@@ -66,31 +72,36 @@ export default function SettingsPage() {
   const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
-    // Load tiebreaker settings from localStorage
-    const savedTiebreakers = localStorage.getItem('tiebreakerSettings');
-    if (savedTiebreakers) {
-      setTiebreakers(JSON.parse(savedTiebreakers));
-    }
-
-    // Load point configurations from API
-    loadPointConfigurations();
+    // Load all settings from API
+    loadSettings();
   }, []);
 
-  const loadPointConfigurations = async () => {
+  const loadSettings = async () => {
     try {
-      const response = await apiClient.get('/api/settings/points');
-      setPointConfigs(response.data);
+      const [pointsRes, tiebreakersRes] = await Promise.all([
+        apiClient.get('/api/settings/points'),
+        apiClient.get('/api/settings/tiebreakers'),
+      ]);
+      setPointConfigs(pointsRes.data);
+      setTiebreakers(tiebreakersRes.data);
     } catch (error) {
-      console.error('Failed to load point configurations', error);
+      console.error('Failed to load settings', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveTiebreakers = () => {
-    localStorage.setItem('tiebreakerSettings', JSON.stringify(tiebreakers));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSaveTiebreakers = async () => {
+    setSaving(true);
+    try {
+      await apiClient.post('/api/settings/tiebreakers', tiebreakers);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Failed to save tiebreaker settings', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSavePoints = async () => {
@@ -123,16 +134,25 @@ export default function SettingsPage() {
     });
   };
 
-  const handleResetTiebreakers = () => {
-    const defaultTiebreakers = {
-      primary: 'points',
-      secondary: 'goalDiff',
+  const handleResetTiebreakers = async () => {
+    const defaultTiebreakers: TiebreakerSettings = {
+      primary: 'setDiff',
+      secondary: 'gameDiff',
       tertiary: 'gamesWon',
+      pointsPerWin: 2,
+      pointsPerDraw: 1,
     };
     setTiebreakers(defaultTiebreakers);
-    localStorage.setItem('tiebreakerSettings', JSON.stringify(defaultTiebreakers));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaving(true);
+    try {
+      await apiClient.post('/api/settings/tiebreakers', defaultTiebreakers);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Failed to reset tiebreaker settings', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getAvailableOptions = (level: 'primary' | 'secondary' | 'tertiary') => {
@@ -289,8 +309,47 @@ export default function SettingsPage() {
       {activeTab === 'tiebreakers' && (
         <div className="bg-white shadow rounded-lg p-6 max-w-4xl">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Tiebreaker Rules for Round Robin Tournaments
+            Round Robin Scoring & Tiebreaker Rules
           </h2>
+
+          {/* Points Configuration */}
+          <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Match Points</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Teams are ranked by total points. Configure how many points are awarded per match result.
+            </p>
+            <div className="grid grid-cols-2 gap-4 max-w-xs">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Points per Win
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={tiebreakers.pointsPerWin}
+                  onChange={(e) => setTiebreakers({ ...tiebreakers, pointsPerWin: parseInt(e.target.value) || 2 })}
+                  className="w-full px-3 py-2 border rounded-md focus:ring-primary focus:border-primary text-center"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Points per Draw
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={tiebreakers.pointsPerDraw}
+                  onChange={(e) => setTiebreakers({ ...tiebreakers, pointsPerDraw: parseInt(e.target.value) || 1 })}
+                  className="w-full px-3 py-2 border rounded-md focus:ring-primary focus:border-primary text-center"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Tiebreakers Section */}
+          <h3 className="text-sm font-medium text-gray-900 mb-2">Tiebreaker Rules</h3>
           <p className="text-sm text-gray-600 mb-6">
             When teams have the same number of points, these rules determine the ranking order.
           </p>
@@ -375,11 +434,14 @@ export default function SettingsPage() {
 
           {/* Info section */}
           <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">How Tiebreakers Work</h3>
+            <h3 className="text-sm font-medium text-blue-900 mb-2">How Ranking Works</h3>
             <p className="text-sm text-blue-800 mb-2">
-              When two or more teams have the same ranking after the primary criterion,
-              the system will use the secondary criterion to break the tie. If still tied,
-              it will use the tertiary criterion.
+              <strong>1. Points:</strong> Teams are first sorted by total match points
+              ({tiebreakers.pointsPerWin} per win, {tiebreakers.pointsPerDraw} per draw).
+            </p>
+            <p className="text-sm text-blue-800 mb-2">
+              <strong>2. Tiebreakers:</strong> When teams have equal points, the system applies
+              tiebreakers in order (1st → 2nd → 3rd) until the tie is broken.
             </p>
             <p className="text-sm text-blue-800">
               <strong>Note:</strong> These settings apply to Round Robin and Group Stage

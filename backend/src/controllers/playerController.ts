@@ -207,14 +207,18 @@ export const resetPlayerStats = async (req: AuthRequest, res: Response) => {
     // Reset all player stats to zero
     await prisma.playerStats.updateMany({
       data: {
-        matchesPlayed: 0,
+        totalMatches: 0,
         matchesWon: 0,
         matchesLost: 0,
+        matchesDrawn: 0,
         setsWon: 0,
         setsLost: 0,
         gamesWon: 0,
         gamesLost: 0,
+        tournamentsPlayed: 0,
+        tournamentsWon: 0,
         tournamentPoints: 0,
+        winPercentage: 0,
       },
     });
 
