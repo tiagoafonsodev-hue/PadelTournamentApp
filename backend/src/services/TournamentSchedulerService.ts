@@ -1,5 +1,7 @@
 // Tournament Scheduler for Padel Tournaments (variable player counts)
 
+import logger from '../lib/logger';
+
 interface Team {
   player1Id: string;
   player2Id: string;
@@ -11,6 +13,7 @@ interface MatchData {
   roundNumber: number;
   matchNumber: number;
   matchDay?: number; // For Round Robin
+  fieldNumber?: number;
   player1Id: string;
   player2Id: string;
   player3Id: string;
@@ -19,6 +22,29 @@ interface MatchData {
 }
 
 export class TournamentSchedulerService {
+  /**
+   * Assign field numbers to matches based on matchDay
+   * Distributes matches round-robin across available fields
+   */
+  assignFieldNumbers(matches: MatchData[], fieldCount: number): MatchData[] {
+    // Group matches by matchDay
+    const matchesByDay = new Map<number, MatchData[]>();
+    for (const match of matches) {
+      const day = match.matchDay || 1;
+      if (!matchesByDay.has(day)) matchesByDay.set(day, []);
+      matchesByDay.get(day)!.push(match);
+    }
+
+    // Assign fields round-robin within each matchDay
+    for (const [, dayMatches] of matchesByDay) {
+      dayMatches.forEach((match, index) => {
+        match.fieldNumber = (index % fieldCount) + 1;
+      });
+    }
+
+    return matches;
+  }
+
   /**
    * Generate Round Robin matches for variable team counts
    * Supports: 3 teams (6 players), 4 teams (8 players), 6 teams (12 players)
@@ -175,6 +201,11 @@ export class TournamentSchedulerService {
 
   /**
    * Generate Round Robin for multiple groups
+   * Uses simple alternating distribution for balanced groups
+   * Example: Teams 1-12 sorted by strength
+   * Group A: 1, 4, 7, 10
+   * Group B: 2, 5, 8, 11
+   * Group C: 3, 6, 9, 12
    */
   private generateRoundRobinMultiGroup(
     tournamentId: string,
@@ -185,11 +216,26 @@ export class TournamentSchedulerService {
     const matches: MatchData[] = [];
     let matchNumber = 1;
 
-    // Split teams into groups
+    logger.debug('Group distribution: distributing teams', { teamCount: teams.length, groupCount, pattern: 'alternating' });
+
+    // Distribute teams using simple alternating pattern for balanced groups
+    const groups: Team[][] = Array.from({ length: groupCount }, () => []);
+
+    for (let i = 0; i < teams.length; i++) {
+      const groupIndex = i % groupCount;
+      groups[groupIndex].push(teams[i]);
+      logger.debug('Group distribution: team assigned', { teamIndex: i + 1, groupNumber: groupIndex + 1 });
+    }
+
+    // Log final group composition
+    logger.info('Group distribution complete', {
+      groups: groups.map((group, index) => ({ groupNumber: index + 1, teamCount: group.length }))
+    });
+
+    // Generate round robin within each group
     for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
       const groupNumber = groupIndex + 1;
-      const startIndex = groupIndex * teamsPerGroup;
-      const groupTeams = teams.slice(startIndex, startIndex + teamsPerGroup);
+      const groupTeams = groups[groupIndex];
 
       // Generate round robin within the group
       const groupMatches = this.generateRoundRobinSingleGroup(

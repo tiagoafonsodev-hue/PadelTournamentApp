@@ -12,5 +12,7 @@ export function useTournaments() {
   return useQuery({
     queryKey: queryKeys.tournaments.all,
     queryFn: fetchTournaments,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }

@@ -22,7 +22,14 @@ export function MatchCard({ match, onEditResult }: MatchCardProps) {
   return (
     <Card padding="sm" className="relative">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-gray-500">Match {match.matchNumber}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Match {match.matchNumber}</span>
+          {match.fieldNumber && (
+            <Badge variant="info" className="text-xs">
+              Field {match.fieldNumber}
+            </Badge>
+          )}
+        </div>
         <Badge variant={getMatchStatusVariant(match.status)} className="text-xs">
           {match.status}
         </Badge>

@@ -10,6 +10,26 @@ interface TournamentCardProps {
   onDelete?: (id: string, name: string) => void;
 }
 
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function getCategoryLabel(category: string): string {
+  switch (category) {
+    case 'OPEN_250': return 'Open 250';
+    case 'OPEN_500': return 'Open 500';
+    case 'OPEN_1000': return 'Open 1000';
+    case 'MASTERS': return 'Masters';
+    default: return category;
+  }
+}
+
+function getTournamentDisplayName(tournament: Tournament): string {
+  if (tournament.name) return tournament.name;
+  return `${getCategoryLabel(tournament.category)} - ${formatDate(tournament.date)}`;
+}
+
 function getTypeLabel(type: string): string {
   switch (type) {
     case 'ROUND_ROBIN':
@@ -34,7 +54,7 @@ export function TournamentCard({ tournament, onDelete }: TournamentCardProps) {
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-medium text-gray-900 truncate">
-          {tournament.name}
+          {getTournamentDisplayName(tournament)}
         </h3>
         <Badge variant={getTournamentStatusVariant(tournament.status)}>
           {tournament.status.replace(/_/g, ' ')}
@@ -43,12 +63,12 @@ export function TournamentCard({ tournament, onDelete }: TournamentCardProps) {
       <div className="space-y-2 text-sm text-gray-500">
         <p>{getTypeLabel(tournament.type)}</p>
         <div className="flex items-center gap-1">
-          <Users className="h-4 w-4" />
-          <span>{tournament.players?.length || 0} players</span>
+          <Calendar className="h-4 w-4" />
+          <span>{formatDate(tournament.date)}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Calendar className="h-4 w-4" />
-          <span>Phase {tournament.currentPhase} of {tournament.maxPhases}</span>
+          <Users className="h-4 w-4" />
+          <span>{tournament.players?.length || 0} players</span>
         </div>
       </div>
       <div className="mt-4 flex items-center justify-between">
@@ -66,7 +86,7 @@ export function TournamentCard({ tournament, onDelete }: TournamentCardProps) {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(tournament.id, tournament.name);
+              onDelete(tournament.id, getTournamentDisplayName(tournament));
             }}
             className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
             title="Delete tournament"

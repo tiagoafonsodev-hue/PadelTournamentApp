@@ -530,6 +530,72 @@ describe('TournamentSchedulerService', () => {
     });
   });
 
+  describe('Field Number Assignment', () => {
+    it('should assign field numbers round-robin within each matchDay', () => {
+      const teams = createTeams(4);
+      let matches = scheduler.generateRoundRobinMatches('t1', teams);
+      matches = scheduler.assignFieldNumbers(matches, 2);
+
+      // Day 1 should have matches on fields 1 and 2
+      const day1Matches = matches.filter(m => m.matchDay === 1);
+      const day1Fields = day1Matches.map(m => m.fieldNumber).sort();
+      expect(day1Fields).toEqual([1, 2]);
+
+      // Same for other days
+      const day2Matches = matches.filter(m => m.matchDay === 2);
+      const day2Fields = day2Matches.map(m => m.fieldNumber).sort();
+      expect(day2Fields).toEqual([1, 2]);
+    });
+
+    it('should cycle through fields when more matches than fields', () => {
+      const teams = createTeams(6);
+      let matches = scheduler.generateRoundRobinMatches('t1', teams);
+      matches = scheduler.assignFieldNumbers(matches, 2);
+
+      // Day 1 should have 3 matches on 2 fields: [1, 2, 1]
+      const day1Matches = matches.filter(m => m.matchDay === 1);
+      expect(day1Matches).toHaveLength(3);
+      expect(day1Matches[0].fieldNumber).toBe(1);
+      expect(day1Matches[1].fieldNumber).toBe(2);
+      expect(day1Matches[2].fieldNumber).toBe(1);
+    });
+
+    it('should handle single field', () => {
+      const teams = createTeams(4);
+      let matches = scheduler.generateRoundRobinMatches('t1', teams);
+      matches = scheduler.assignFieldNumbers(matches, 1);
+
+      for (const match of matches) {
+        expect(match.fieldNumber).toBe(1);
+      }
+    });
+
+    it('should handle more fields than matches per day', () => {
+      const teams = createTeams(4);
+      let matches = scheduler.generateRoundRobinMatches('t1', teams);
+      matches = scheduler.assignFieldNumbers(matches, 5);
+
+      // Day 1 should only use fields 1 and 2
+      const day1Matches = matches.filter(m => m.matchDay === 1);
+      const day1Fields = day1Matches.map(m => m.fieldNumber).sort();
+      expect(day1Fields).toEqual([1, 2]);
+    });
+
+    it('should handle matches without matchDay', () => {
+      // Create matches without matchDay (like knockout matches)
+      const matches = [
+        { tournamentId: 't1', phase: 1, roundNumber: 1, matchNumber: 1, player1Id: 'p1', player2Id: 'p2', player3Id: 'p3', player4Id: 'p4' },
+        { tournamentId: 't1', phase: 1, roundNumber: 1, matchNumber: 2, player1Id: 'p5', player2Id: 'p6', player3Id: 'p7', player4Id: 'p8' },
+      ];
+
+      const assignedMatches = scheduler.assignFieldNumbers(matches, 2);
+
+      // Should treat undefined matchDay as day 1
+      expect(assignedMatches[0].fieldNumber).toBe(1);
+      expect(assignedMatches[1].fieldNumber).toBe(2);
+    });
+  });
+
   describe('Match Data Integrity', () => {
     it('should always include tournamentId in all matches', () => {
       const teams = createTeams(4);

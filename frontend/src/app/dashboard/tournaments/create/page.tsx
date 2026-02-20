@@ -15,9 +15,11 @@ export default function CreateTournamentPage() {
   const [step, setStep] = useState(1);
   const [playerCount, setPlayerCount] = useState<number>(8);
   const [name, setName] = useState('');
+  const [date, setDate] = useState('');
   const [type, setType] = useState<TournamentType>(TournamentType.ROUND_ROBIN);
   const [category, setCategory] = useState<TournamentCategory>(TournamentCategory.OPEN_250);
   const [allowTies, setAllowTies] = useState(false);
+  const [fieldCount, setFieldCount] = useState<number>(2);
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [search, setSearch] = useState('');
@@ -125,13 +127,15 @@ export default function CreateTournamentPage() {
     try {
       const selectedPlayerIds = getSelectedPlayerIds();
       const response = await apiClient.post('/api/tournaments', {
-        name,
+        name: name || undefined,
+        date,
         type,
         category,
         playerCount,
         playerIds: selectedPlayerIds,
         teams,
         allowTies: type !== TournamentType.KNOCKOUT ? allowTies : false,
+        fieldCount,
       });
 
       router.push(`/dashboard/tournaments/${response.data.id}`);
@@ -235,11 +239,23 @@ export default function CreateTournamentPage() {
           <div className="bg-white shadow rounded-lg p-6 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tournament Name *
+                Tournament Date *
+              </label>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2 border"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tournament Name (optional)
               </label>
               <input
                 type="text"
-                required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2 border"
@@ -327,6 +343,27 @@ export default function CreateTournamentPage() {
               </div>
             )}
 
+            {/* Field Count */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Fields/Courts
+              </label>
+              <select
+                value={fieldCount}
+                onChange={(e) => setFieldCount(parseInt(e.target.value, 10))}
+                className="block w-full md:w-48 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-3 py-2 border"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <option key={n} value={n}>
+                    {n} {n === 1 ? 'field' : 'fields'}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Matches will be assigned to fields in rotation
+              </p>
+            </div>
+
             <div className="flex gap-3 justify-end pt-4">
               <button
                 onClick={() => setStep(1)}
@@ -336,7 +373,7 @@ export default function CreateTournamentPage() {
               </button>
               <button
                 onClick={() => setStep(3)}
-                disabled={!name}
+                disabled={!date}
                 className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark disabled:opacity-50"
               >
                 Next: Create Teams
@@ -359,7 +396,7 @@ export default function CreateTournamentPage() {
           Create Tournament - Step 3: Create Teams
         </h1>
         <p className="text-sm text-gray-600 mb-6">
-          {name} - Select players for each team ({assignedCount}/{playerCount} players assigned)
+          {name || date} - Select players for each team ({assignedCount}/{playerCount} players assigned)
         </p>
 
         <div className="bg-white shadow rounded-lg p-6">

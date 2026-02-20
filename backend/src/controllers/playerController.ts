@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
+import logger from '../lib/logger';
+import { handleError } from '../lib/errorHandler';
 
 const playerSchema = z.object({
   name: z.string().min(1),
@@ -42,26 +44,57 @@ export const createPlayer = async (req: AuthRequest, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Create player');
   }
 };
 
-// All users: Get all players (global)
+// All users: Get all players (global) with optional pagination
 export const getPlayers = async (req: AuthRequest, res: Response) => {
   try {
-    const { search } = req.query;
+    const { search, page, limit } = req.query;
 
+    const whereClause = search
+      ? { name: { contains: search as string, mode: 'insensitive' as const } }
+      : undefined;
+
+    // If pagination params provided, use pagination
+    if (page && limit) {
+      const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
+      const skip = (pageNum - 1) * limitNum;
+
+      const [players, total] = await Promise.all([
+        prisma.player.findMany({
+          where: whereClause,
+          include: { stats: true },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limitNum,
+        }),
+        prisma.player.count({ where: whereClause }),
+      ]);
+
+      return res.json({
+        data: players,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+        },
+      });
+    }
+
+    // Fallback: return all players (backwards compatible)
     const players = await prisma.player.findMany({
-      where: search
-        ? { name: { contains: search as string, mode: 'insensitive' } }
-        : undefined,
+      where: whereClause,
       include: { stats: true },
       orderBy: { createdAt: 'desc' },
     });
 
     res.json(players);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Get players');
   }
 };
 
@@ -118,7 +151,7 @@ export const updatePlayer = async (req: AuthRequest, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Update player', { playerId: req.params.id });
   }
 };
 
@@ -139,7 +172,7 @@ export const deletePlayer = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Player deleted' });
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Delete player', { playerId: req.params.id });
   }
 };
 
@@ -157,7 +190,7 @@ export const getLeaderboard = async (req: AuthRequest, res: Response) => {
 
     res.json(players);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Get leaderboard');
   }
 };
 
@@ -177,7 +210,7 @@ export const getPlayer = async (req: AuthRequest, res: Response) => {
 
     res.json(player);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Get player', { playerId: req.params.id });
   }
 };
 
@@ -196,8 +229,90 @@ export const resetLeaderboard = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Leaderboard reset successfully' });
   } catch (error) {
-    console.error('Error resetting leaderboard:', error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Reset leaderboard');
+  }
+};
+
+// Get player tournament history with pagination
+export const getPlayerHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 10));
+
+    const [results, total] = await Promise.all([
+      prisma.tournamentResult.findMany({
+        where: { playerId: id },
+        include: {
+          tournament: {
+            select: { id: true, name: true, date: true, type: true, category: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.tournamentResult.count({ where: { playerId: id } }),
+    ]);
+
+    res.json({
+      data: results,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    handleError(res, error, 'Get player history', { playerId: req.params.id });
+  }
+};
+
+// Get player statistics trends
+export const getPlayerTrends = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get all tournament results for this player, ordered by date
+    const results = await prisma.tournamentResult.findMany({
+      where: { playerId: id },
+      include: { tournament: { select: { date: true, category: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Build per-tournament trend (cumulative points)
+    let cumulativePoints = 0;
+    const perTournament = results.map(r => {
+      cumulativePoints += r.pointsAwarded + r.bonusPoints;
+      return {
+        date: r.tournament.date,
+        category: r.category,
+        position: r.finalPosition,
+        pointsEarned: r.pointsAwarded + r.bonusPoints,
+        cumulativePoints,
+      };
+    });
+
+    // Build monthly aggregation
+    const monthlyMap = new Map<string, { points: number; tournaments: number; wins: number }>();
+    for (const r of results) {
+      const month = r.tournament.date.toISOString().slice(0, 7); // YYYY-MM
+      const existing = monthlyMap.get(month) || { points: 0, tournaments: 0, wins: 0 };
+      existing.points += r.pointsAwarded + r.bonusPoints;
+      existing.tournaments += 1;
+      if (r.finalPosition === 1) existing.wins += 1;
+      monthlyMap.set(month, existing);
+    }
+
+    const monthly = Array.from(monthlyMap.entries()).map(([month, data]) => ({
+      month,
+      ...data,
+    }));
+
+    res.json({ perTournament, monthly });
+  } catch (error) {
+    handleError(res, error, 'Get player trends', { playerId: req.params.id });
   }
 };
 
@@ -227,7 +342,6 @@ export const resetPlayerStats = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Player stats reset successfully' });
   } catch (error) {
-    console.error('Error resetting player stats:', error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Reset player stats');
   }
 };

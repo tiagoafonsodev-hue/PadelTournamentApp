@@ -5,9 +5,12 @@ import { AuthRequest } from '../middleware/auth';
 import { tournamentScheduler } from '../services/TournamentSchedulerService';
 import { tournamentProgress } from '../services/TournamentProgressService';
 import prisma from '../lib/prisma';
+import logger from '../lib/logger';
+import { handleError } from '../lib/errorHandler';
 
 const tournamentSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().optional(),
+  date: z.string().transform((str) => new Date(str)),
   type: z.enum(['ROUND_ROBIN', 'KNOCKOUT', 'GROUP_STAGE_KNOCKOUT']),
   category: z.enum(['OPEN_250', 'OPEN_500', 'OPEN_1000', 'MASTERS']).optional().default('OPEN_250'),
   playerCount: z.number().int().min(4),
@@ -17,6 +20,7 @@ const tournamentSchema = z.object({
     player2Id: z.string(),
   })).min(2),
   allowTies: z.boolean().optional().default(false),
+  fieldCount: z.number().int().min(1).max(10).optional().default(2),
 });
 
 interface Team {
@@ -25,31 +29,32 @@ interface Team {
 }
 
 /**
- * Seed teams based on their combined 2025 tournament points
+ * Seed teams based on their combined current-season tournament points
  * Uses snake/zigzag distribution for balanced groups
  */
 async function seedTeamsByPoints(teams: Team[]): Promise<Team[]> {
-  // Get 2025 tournament points for all players
+  // Get current-season tournament points for all players
   const playerIds = teams.flatMap(t => [t.player1Id, t.player2Id]);
 
-  // Get all tournament results from 2025 for these players
+  // Get all tournament results from the current season year for these players
+  const currentYear = new Date().getFullYear();
   const tournamentResults = await prisma.tournamentResult.findMany({
     where: {
       playerId: { in: playerIds },
       createdAt: {
-        gte: new Date('2025-01-01'),
-        lt: new Date('2026-01-01'),
+        gte: new Date(currentYear, 0, 1),
+        lt: new Date(currentYear + 1, 0, 1),
       },
     },
   });
 
-  console.log(`[Team Seeding] Found ${tournamentResults.length} tournament results from 2025`);
+  logger.info('Team seeding: found tournament results', { count: tournamentResults.length, year: currentYear });
 
-  // Calculate total 2025 points per player
-  const player2025Points = new Map<string, number>();
+  // Calculate total season points per player
+  const playerSeasonPoints = new Map<string, number>();
   for (const result of tournamentResults) {
-    const currentPoints = player2025Points.get(result.playerId) || 0;
-    player2025Points.set(result.playerId, currentPoints + result.pointsAwarded + result.bonusPoints);
+    const currentPoints = playerSeasonPoints.get(result.playerId) || 0;
+    playerSeasonPoints.set(result.playerId, currentPoints + result.pointsAwarded + result.bonusPoints);
   }
 
   // Get player names for logging
@@ -59,13 +64,20 @@ async function seedTeamsByPoints(teams: Team[]): Promise<Team[]> {
   });
   const playerNames = new Map(players.map(p => [p.id, p.name]));
 
-  // Calculate team points (sum of both players' 2025 points)
+  // Calculate team points (sum of both players' season points)
   const teamsWithPoints = teams.map((team, index) => {
-    const player1Points = player2025Points.get(team.player1Id) || 0;
-    const player2Points = player2025Points.get(team.player2Id) || 0;
+    const player1Points = playerSeasonPoints.get(team.player1Id) || 0;
+    const player2Points = playerSeasonPoints.get(team.player2Id) || 0;
     const totalPoints = player1Points + player2Points;
 
-    console.log(`[Team Seeding] Team ${index + 1}: ${playerNames.get(team.player1Id)} (${player1Points}) + ${playerNames.get(team.player2Id)} (${player2Points}) = ${totalPoints} pts`);
+    logger.debug('Team seeding: team points calculated', {
+      teamIndex: index + 1,
+      player1: playerNames.get(team.player1Id),
+      player1Points,
+      player2: playerNames.get(team.player2Id),
+      player2Points,
+      totalPoints
+    });
 
     return {
       team,
@@ -76,9 +88,8 @@ async function seedTeamsByPoints(teams: Team[]): Promise<Team[]> {
   // Sort teams by total points descending (highest points first)
   teamsWithPoints.sort((a, b) => b.totalPoints - a.totalPoints);
 
-  console.log('[Team Seeding] Teams sorted by 2025 points (strongest to weakest)');
-  teamsWithPoints.forEach((t, i) => {
-    console.log(`  ${i + 1}. Team with ${t.totalPoints} points`);
+  logger.info('Team seeding: teams sorted by points', {
+    order: teamsWithPoints.map((t, i) => ({ rank: i + 1, points: t.totalPoints }))
   });
 
   // Return sorted teams for snake draft distribution
@@ -110,7 +121,7 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Ties are not allowed in knockout tournaments' });
     }
 
-    // Reorder teams based on 2025 tournament points for balanced group generation
+    // Reorder teams based on current-season tournament points for balanced group generation
     let seededTeams = data.teams;
     if (data.type === 'GROUP_STAGE_KNOCKOUT') {
       seededTeams = await seedTeamsByPoints(data.teams);
@@ -120,11 +131,13 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
     const tournament = await prisma.tournament.create({
       data: {
         userId: req.userId!,
-        name: data.name,
+        name: data.name || null,
+        date: data.date,
         type: data.type as TournamentType,
         category: data.category as TournamentCategory,
         maxPhases: data.type === 'GROUP_STAGE_KNOCKOUT' ? 2 : 1,
         allowTies: data.allowTies,
+        fieldCount: data.fieldCount,
         startedAt: new Date(),
         status: TournamentStatus.IN_PROGRESS,
       },
@@ -148,6 +161,9 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
       matches = tournamentScheduler.generateGroupStageMatches(tournament.id, seededTeams);
     }
 
+    // Assign field numbers to matches
+    matches = tournamentScheduler.assignFieldNumbers(matches, data.fieldCount);
+
     await prisma.match.createMany({
       data: matches.map((m) => ({
         tournamentId: m.tournamentId,
@@ -155,6 +171,7 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
         roundNumber: m.roundNumber,
         matchNumber: m.matchNumber,
         matchDay: m.matchDay,
+        fieldNumber: m.fieldNumber,
         player1Id: m.player1Id,
         player2Id: m.player2Id,
         player3Id: m.player3Id,
@@ -169,35 +186,54 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Create tournament', { userId: req.userId });
   }
 };
 
-// All users: Get all tournaments (global)
+// Get all tournaments for the authenticated user
 export const getTournaments = async (req: AuthRequest, res: Response) => {
   try {
     const tournaments = await prisma.tournament.findMany({
-      include: {
-        players: { include: { player: true } },
-        matches: true,
+      where: { userId: req.userId! },
+      select: {
+        id: true,
+        name: true,
+        date: true,
+        type: true,
+        category: true,
+        status: true,
+        createdAt: true,
+        _count: {
+          select: {
+            players: true,
+            matches: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(tournaments);
+    // Transform _count to players array for frontend compatibility
+    const transformedTournaments = tournaments.map((t) => ({
+      ...t,
+      players: Array(t._count.players).fill(null), // Fake array for .length compatibility
+      matchCount: t._count.matches,
+      _count: undefined,
+    }));
+
+    res.json(transformedTournaments);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Get tournaments', { userId: req.userId });
   }
 };
 
-// All users: Get tournament by ID (global)
+// Get tournament by ID (scoped to user)
 export const getTournamentById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const tournament = await prisma.tournament.findUnique({
-      where: { id },
+    const tournament = await prisma.tournament.findFirst({
+      where: { id, userId: req.userId! },
       include: {
         players: { include: { player: true } },
         matches: {
@@ -218,19 +254,19 @@ export const getTournamentById = async (req: AuthRequest, res: Response) => {
 
     res.json(tournament);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Get tournament', { tournamentId: req.params.id, userId: req.userId });
   }
 };
 
-// All users: Get tournament standings (global)
+// Get tournament standings (scoped to user)
 // Query param: ?final=true to get final positions (for Final Classification modal)
 export const getTournamentStandings = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { final } = req.query; // ?final=true for final classification
 
-    const tournament = await prisma.tournament.findUnique({
-      where: { id },
+    const tournament = await prisma.tournament.findFirst({
+      where: { id, userId: req.userId! },
       include: {
         matches: {
           include: {
@@ -348,8 +384,7 @@ export const getTournamentStandings = async (req: AuthRequest, res: Response) =>
 
     res.json(standings);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Get tournament standings', { tournamentId: req.params.id });
   }
 };
 
@@ -516,13 +551,13 @@ async function calculateKnockoutStandings(matches: any[]) {
   return standings;
 }
 
-// Admin only: Delete a tournament (protected by adminMiddleware in routes)
+// Admin only: Delete a tournament (protected by adminMiddleware in routes, scoped to user)
 export const deleteTournament = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const tournament = await prisma.tournament.findUnique({
-      where: { id },
+    const tournament = await prisma.tournament.findFirst({
+      where: { id, userId: req.userId! },
     });
 
     if (!tournament) {
@@ -536,7 +571,6 @@ export const deleteTournament = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Tournament deleted successfully' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Delete tournament', { tournamentId: req.params.id, userId: req.userId });
   }
 };

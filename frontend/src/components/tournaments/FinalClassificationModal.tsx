@@ -1,24 +1,7 @@
 'use client';
 
 import { X, Trophy } from 'lucide-react';
-
-interface TeamStanding {
-  player1Id: string;
-  player2Id: string;
-  player1?: { id: string; name: string };
-  player2?: { id: string; name: string };
-  matchesPlayed?: number;
-  matchesWon?: number;
-  matchesLost?: number;
-  matchesDrawn?: number;
-  points?: number;
-  gamesWon?: number;
-  gamesLost?: number;
-  groupNumber?: number;
-  position?: number;
-  tournamentPointsAwarded?: number;
-  bonusPoints?: number;
-}
+import type { TeamStanding } from '@/types';
 
 interface FinalClassificationModalProps {
   isOpen: boolean;

@@ -1,26 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
+import type { TeamStanding } from '@/types';
 
-export interface TeamStanding {
-  player1Id: string;
-  player2Id: string;
-  player1?: { id: string; name: string };
-  player2?: { id: string; name: string };
-  matchesPlayed: number;
-  matchesWon: number;
-  matchesLost: number;
-  points: number;
-  setsWon: number;
-  setsLost: number;
-  gamesWon: number;
-  gamesLost: number;
-  groupNumber?: number;
-  groupPosition?: number;
-  position?: number;
-  tournamentPointsAwarded?: number;
-  bonusPoints?: number;
-}
+export type { TeamStanding };
 
 async function fetchTournamentStandings(id: string, final?: boolean): Promise<TeamStanding[]> {
   const url = final
@@ -35,6 +18,7 @@ export function useTournamentStandings(id: string) {
     queryKey: queryKeys.tournaments.standings(id),
     queryFn: () => fetchTournamentStandings(id),
     enabled: !!id,
+    staleTime: 1000 * 30, // 30 seconds (real-time during matches)
   });
 }
 
@@ -44,5 +28,6 @@ export function useFinalStandings(id: string, enabled: boolean = true) {
     queryKey: [...queryKeys.tournaments.standings(id), 'final'],
     queryFn: () => fetchTournamentStandings(id, true),
     enabled: !!id && enabled,
+    staleTime: 1000 * 60 * 5, // 5 minutes (final standings don't change)
   });
 }

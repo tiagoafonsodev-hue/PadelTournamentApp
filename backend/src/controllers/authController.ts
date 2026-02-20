@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middleware/auth';
+import logger from '../lib/logger';
+import { handleError } from '../lib/errorHandler';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -178,8 +180,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Create user');
   }
 };
 

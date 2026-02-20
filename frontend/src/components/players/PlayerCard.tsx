@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail, Phone, Pencil, Trash2, User } from 'lucide-react';
+import { Mail, Phone, Pencil, Trash2, User, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { Player } from '@/types';
 import { Card } from '@/components/ui';
@@ -49,7 +49,14 @@ export function PlayerCard({ player, onEdit, onDelete, isOwnProfile }: PlayerCar
         </div>
       )}
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex gap-3 flex-wrap">
+        <Link
+          href={`/dashboard/players/${player.id}`}
+          className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <Eye className="h-4 w-4" />
+          View
+        </Link>
         {onEdit && (
           <button
             onClick={() => onEdit(player)}

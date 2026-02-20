@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChevronDown, ChevronRight, Trophy } from 'lucide-react';
-import { Match, MatchResultInput, UserRole } from '@/types';
+import { Match, MatchResultInput, UserRole, TeamStanding } from '@/types';
 import { useTournament, useTournamentStandings, useFinalStandings } from '@/hooks/queries';
 import { useSubmitMatchResult } from '@/hooks/mutations';
 import { useToast } from '@/providers';
@@ -11,31 +11,35 @@ import { MatchResultModal } from '@/components/matches/MatchResultModal';
 import { Spinner, Badge, getTournamentStatusVariant } from '@/components/ui';
 import { KnockoutBracket } from '@/components/tournaments/KnockoutBracket';
 import { FinalClassificationModal } from '@/components/tournaments/FinalClassificationModal';
+import { Tournament } from '@/types';
 
-interface TeamStanding {
-  player1Id: string;
-  player2Id: string;
-  player1?: { id: string; name: string };
-  player2?: { id: string; name: string };
-  matchesPlayed?: number;
-  matchesWon?: number;
-  matchesLost?: number;
-  matchesDrawn?: number;
-  points?: number;
-  gamesWon?: number;
-  gamesLost?: number;
-  groupNumber?: number;
-  position?: number;
-  tournamentPointsAwarded?: number;
-  bonusPoints?: number;
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+
+function getCategoryLabel(category: string): string {
+  switch (category) {
+    case 'OPEN_250': return 'Open 250';
+    case 'OPEN_500': return 'Open 500';
+    case 'OPEN_1000': return 'Open 1000';
+    case 'MASTERS': return 'Masters';
+    default: return category;
+  }
+}
+
+function getTournamentDisplayName(tournament: Tournament): string {
+  if (tournament.name) return tournament.name;
+  return `${getCategoryLabel(tournament.category)} - ${formatDate(tournament.date)}`;
+}
+
 
 export default function TournamentDetailPage() {
   const params = useParams();
   const tournamentId = params.id as string;
   const { showToast } = useToast();
 
-  const { data: tournament, isLoading } = useTournament(tournamentId);
+  const { data: tournament, isLoading, isError } = useTournament(tournamentId);
   const { data: standingsData } = useTournamentStandings(tournamentId);
   const { data: finalStandingsData } = useFinalStandings(
     tournamentId,
@@ -49,8 +53,13 @@ export default function TournamentDetailPage() {
   const [showFinalClassification, setShowFinalClassification] = useState(false);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    setUserRole(user.role || null);
+    try {
+      const raw = localStorage.getItem('user');
+      const user = raw ? JSON.parse(raw) : {};
+      setUserRole(user.role ?? null);
+    } catch {
+      setUserRole(null);
+    }
   }, []);
 
   const isAdmin = userRole === UserRole.ADMIN;
@@ -108,6 +117,14 @@ export default function TournamentDetailPage() {
     return (
       <div className="flex justify-center items-center h-64">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="px-4 py-8 text-center text-red-600">
+        Failed to load tournament. Please refresh the page.
       </div>
     );
   }
@@ -172,9 +189,10 @@ export default function TournamentDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              {tournament.name}
+              {getTournamentDisplayName(tournament)}
             </h1>
             <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+              <span>Date: {formatDate(tournament.date)}</span>
               <span>Type: {tournament.type.replace(/_/g, ' ')}</span>
               <span>Status: {tournament.status.replace(/_/g, ' ')}</span>
               <span>
@@ -800,7 +818,7 @@ export default function TournamentDetailPage() {
         isOpen={showFinalClassification}
         onClose={() => setShowFinalClassification(false)}
         standings={finalStandingsData || []}
-        tournamentName={tournament.name}
+        tournamentName={getTournamentDisplayName(tournament)}
         tournamentType={tournament.type}
       />
     </div>

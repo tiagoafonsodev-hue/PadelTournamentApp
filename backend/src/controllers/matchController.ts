@@ -3,11 +3,16 @@ import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
 import { matchResultService } from '../services/MatchResultService';
 import prisma from '../lib/prisma';
+import logger from '../lib/logger';
+import { handleError } from '../lib/errorHandler';
 
 const matchResultSchema = z.object({
-  team1Score: z.number().min(0),
-  team2Score: z.number().min(0),
-});
+  team1Score: z.number().min(0).max(15), // Max realistic game score
+  team2Score: z.number().min(0).max(15),
+}).refine(
+  (data) => data.team1Score <= 15 && data.team2Score <= 15,
+  { message: 'Score cannot exceed 15 games' }
+);
 
 // Admin only: Submit match result (protected by adminMiddleware in routes)
 export const submitMatchResult = async (req: AuthRequest, res: Response) => {
@@ -44,7 +49,6 @@ export const submitMatchResult = async (req: AuthRequest, res: Response) => {
     if (error.message) {
       return res.status(400).json({ error: error.message });
     }
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Submit match result', { matchId: req.params.id });
   }
 };

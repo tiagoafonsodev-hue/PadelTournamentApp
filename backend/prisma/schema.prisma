@@ -75,13 +75,15 @@ model PlayerStats {
 model Tournament {
   id           String             @id @default(uuid())
   userId       String             @map("user_id")
-  name         String
+  name         String?
+  date         DateTime           @default(now())
   type         TournamentType
   category     TournamentCategory @default(OPEN_250)
   status       TournamentStatus   @default(CREATED)
   currentPhase Int                @default(1) @map("current_phase")
   maxPhases    Int                @default(1) @map("max_phases")
   allowTies    Boolean            @default(false) @map("allow_ties")
+  fieldCount   Int                @default(2) @map("field_count")
   createdAt    DateTime           @default(now()) @map("created_at")
   startedAt    DateTime?          @map("started_at")
   finishedAt   DateTime?          @map("finished_at")
@@ -115,6 +117,7 @@ model Match {
   phase        Int
   roundNumber  Int          @map("round_number")
   matchNumber  Int          @map("match_number")
+  fieldNumber  Int?         @map("field_number")
   player1Id    String       @map("player1_id")
   player2Id    String       @map("player2_id")
   player3Id    String       @map("player3_id")
@@ -145,6 +148,10 @@ model Match {
   @@index([player2Id])
   @@index([player3Id])
   @@index([player4Id])
+  @@index([tournamentId, phase])
+  @@index([tournamentId, status])
+  @@index([tournamentId, phase, status])
+  @@index([tournamentId, phase, groupNumber, status])
   @@map("matches")
 }
 
@@ -188,6 +195,7 @@ model TournamentPointConfig {
 
   @@unique([userId, category, position])
   @@index([userId])
+  @@index([userId, category])
   @@map("tournament_point_configs")
 }
 
@@ -208,6 +216,7 @@ model TournamentResult {
   @@unique([tournamentId, playerId])
   @@index([tournamentId])
   @@index([playerId])
+  @@index([playerId, createdAt])
   @@map("tournament_results")
 }
 

@@ -13,5 +13,6 @@ export function useTournament(id: string) {
     queryKey: queryKeys.tournaments.detail(id),
     queryFn: () => fetchTournament(id),
     enabled: !!id,
+    staleTime: 1000 * 60, // 1 minute (may change during active tournament)
   });
 }

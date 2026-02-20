@@ -2,6 +2,8 @@ import { Response } from 'express';
 import * as XLSX from 'xlsx';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
+import logger from '../lib/logger';
+import { handleError } from '../lib/errorHandler';
 
 interface PlayerRow {
   name?: string;
@@ -106,11 +108,10 @@ export const importPlayers = async (req: AuthRequest, res: Response) => {
       ...result,
     });
   } catch (error: any) {
-    console.error('Import error:', error);
     if (error.message?.includes('File is empty')) {
       return res.status(400).json({ error: 'File is empty or corrupted' });
     }
-    res.status(500).json({ error: 'Failed to process file' });
+    handleError(res, error, 'Import players');
   }
 };
 
@@ -146,7 +147,6 @@ export const getPlayerTemplate = async (req: AuthRequest, res: Response) => {
     res.setHeader('Content-Disposition', 'attachment; filename=players_template.xlsx');
     res.send(buffer);
   } catch (error) {
-    console.error('Template generation error:', error);
-    res.status(500).json({ error: 'Failed to generate template' });
+    handleError(res, error, 'Generate template');
   }
 };

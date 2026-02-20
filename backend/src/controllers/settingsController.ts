@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
 import { tournamentPointService } from '../services/TournamentPointService';
 import prisma from '../lib/prisma';
+import logger from '../lib/logger';
+import { handleError } from '../lib/errorHandler';
 
 // Schema for updating point configuration
 const pointConfigSchema = z.object({
@@ -29,8 +31,7 @@ export const getPointConfigurations = async (req: AuthRequest, res: Response) =>
     const configs = await tournamentPointService.getAllPointConfigurations(req.userId!);
     res.json(configs);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Settings operation');
   }
 };
 
@@ -53,8 +54,7 @@ export const getPointConfiguration = async (req: AuthRequest, res: Response) => 
 
     res.json(config);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Settings operation');
   }
 };
 
@@ -83,8 +83,7 @@ export const savePointConfiguration = async (req: AuthRequest, res: Response) =>
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Settings operation');
   }
 };
 
@@ -116,8 +115,7 @@ export const getTiebreakerSettings = async (req: AuthRequest, res: Response) => 
       pointsPerDraw: settings.pointsPerDraw,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Settings operation');
   }
 };
 
@@ -152,7 +150,6 @@ export const saveTiebreakerSettings = async (req: AuthRequest, res: Response) =>
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    handleError(res, error, 'Settings operation');
   }
 };

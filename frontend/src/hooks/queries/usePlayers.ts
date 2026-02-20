@@ -13,5 +13,7 @@ export function usePlayers(search?: string) {
   return useQuery({
     queryKey: search ? queryKeys.players.search(search) : queryKeys.players.all,
     queryFn: () => fetchPlayers(search),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }

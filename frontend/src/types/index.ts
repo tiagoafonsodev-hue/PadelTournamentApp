@@ -74,13 +74,15 @@ export enum TournamentCategory {
 export interface Tournament {
   id: string;
   userId: string;
-  name: string;
+  name?: string | null;
+  date: string;
   type: TournamentType;
   category: TournamentCategory;
   status: TournamentStatus;
   currentPhase: number;
   maxPhases: number;
   allowTies: boolean;
+  fieldCount: number;
   createdAt: string;
   startedAt?: string | null;
   finishedAt?: string | null;
@@ -102,6 +104,7 @@ export interface Match {
   roundNumber: number;
   matchNumber: number;
   matchDay?: number | null; // For Round Robin matchday grouping
+  fieldNumber?: number | null;
   player1Id: string;
   player2Id: string;
   player3Id: string;
@@ -149,4 +152,25 @@ export interface TournamentResult {
   createdAt: string;
   player?: Player;
   tournament?: Tournament;
+}
+
+export interface TeamStanding {
+  player1Id: string;
+  player2Id: string;
+  player1?: { id: string; name: string };
+  player2?: { id: string; name: string };
+  matchesPlayed?: number;
+  matchesWon?: number;
+  matchesLost?: number;
+  matchesDrawn?: number;
+  points?: number;
+  setsWon?: number;
+  setsLost?: number;
+  gamesWon?: number;
+  gamesLost?: number;
+  groupNumber?: number;
+  groupPosition?: number;
+  position?: number;
+  tournamentPointsAwarded?: number;
+  bonusPoints?: number;
 }

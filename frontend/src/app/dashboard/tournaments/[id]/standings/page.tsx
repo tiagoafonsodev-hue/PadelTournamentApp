@@ -1,54 +1,44 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import apiClient from '@/lib/api-client';
+import { useTournamentStandings } from '@/hooks/queries/useTournamentStandings';
+import { useTournament } from '@/hooks/queries/useTournament';
+import { Tournament, TeamStanding } from '@/types';
 
-interface Player {
-  id: string;
-  name: string;
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-interface TeamStanding {
-  player1Id: string;
-  player2Id: string;
-  player1?: Player;
-  player2?: Player;
-  matchesPlayed?: number;
-  matchesWon?: number;
-  matchesLost?: number;
-  points?: number;
-  gamesWon?: number;
-  gamesLost?: number;
-  position?: number;
-  tournamentPointsAwarded?: number;
-  bonusPoints?: number;
+function getCategoryLabel(category: string): string {
+  switch (category) {
+    case 'OPEN_250': return 'Open 250';
+    case 'OPEN_500': return 'Open 500';
+    case 'OPEN_1000': return 'Open 1000';
+    case 'MASTERS': return 'Masters';
+    default: return category;
+  }
 }
 
-interface Tournament {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
+function getTournamentDisplayName(tournament: Tournament): string {
+  if (tournament.name) return tournament.name;
+  return `${getCategoryLabel(tournament.category)} - ${formatDate(tournament.date)}`;
 }
 
 export default function TournamentStandingsPage() {
   const params = useParams();
   const router = useRouter();
-  const [tournament, setTournament] = useState<Tournament | null>(null);
+
+  const { data: tournament, isLoading: loadingTournament, isError: tournamentError } = useTournament(params.id as string);
+  const { data: standingsData, isLoading: loadingStandings, isError: standingsError } = useTournamentStandings(params.id as string);
+
   const [standings, setStandings] = useState<TeamStanding[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [tournamentRes, standingsRes] = await Promise.all([
-        apiClient.get(`/api/tournaments/${params.id}`),
-        apiClient.get(`/api/tournaments/${params.id}/standings`),
-      ]);
-      setTournament(tournamentRes.data);
-
+  useEffect(() => {
+    if (standingsData) {
       // Sort standings
-      let sortedStandings = standingsRes.data;
+      let sortedStandings = [...standingsData];
 
       // Check if it's knockout format (has position property)
       if (sortedStandings.length > 0 && sortedStandings[0].position !== undefined) {
@@ -69,23 +59,24 @@ export default function TournamentStandingsPage() {
       }
 
       setStandings(sortedStandings);
-    } catch (err) {
-      console.error('Failed to load standings', err);
-    } finally {
-      setLoading(false);
     }
-  }, [params.id]);
+  }, [standingsData]);
 
-  useEffect(() => {
-    if (params.id) {
-      fetchData();
-    }
-  }, [params.id, fetchData]);
+  const loading = loadingTournament || loadingStandings;
+
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-gray-500">Loading standings...</p>
+      </div>
+    );
+  }
+
+  if (tournamentError || standingsError) {
+    return (
+      <div className="px-4 py-8 text-center text-red-600">
+        Failed to load standings. Please refresh the page.
       </div>
     );
   }
@@ -120,10 +111,10 @@ export default function TournamentStandingsPage() {
           ← Back to Tournament
         </button>
         <h1 className="text-2xl font-semibold text-gray-900">
-          {tournament.name} - Final Classification
+          {getTournamentDisplayName(tournament)} - Final Classification
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Tournament Type: {tournament.type.replace(/_/g, ' ')}
+          Date: {formatDate(tournament.date)} | Type: {tournament.type.replace(/_/g, ' ')}
         </p>
       </div>
 

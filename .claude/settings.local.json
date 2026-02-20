@@ -30,7 +30,17 @@
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npm run prisma:seed:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(dir /s /b \"C:\\\\Users\\\\Tiago\\\\Documents\\\\VIBECODE\\\\PadelTournamentApp\\\\frontend\\\\src\\\\app\\\\dashboard\\\\players\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Tiago\\\\Documents\\\\VIBECODE\\\\PadelTournamentApp\\\\frontend\\\\src\\\\app\\\\dashboard\\\\players\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(dir /s /b \"C:\\\\Users\\\\Tiago\\\\Documents\\\\VIBECODE\\\\PadelTournamentApp\\\\frontend\\\\src\\\\app\\\\dashboard\\\\players\\\\*.tsx\")"
     ]
   }
 }

@@ -12,5 +12,7 @@ export function useLeaderboard() {
   return useQuery({
     queryKey: queryKeys.players.leaderboard,
     queryFn: fetchLeaderboard,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: false,
   });
 }
