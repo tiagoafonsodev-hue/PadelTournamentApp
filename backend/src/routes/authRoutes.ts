@@ -1,6 +1,6 @@
 import express from 'express';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
-import { register, login, getMe, createUser } from '../controllers/authController';
+import { register, login, getMe, createUser, getUsers, updateUser, deleteUser } from '../controllers/authController';
 
 const router = express.Router();
 
@@ -117,5 +117,8 @@ router.get('/me', authMiddleware, getMe);
  *         description: Admin access required
  */
 router.post('/users', authMiddleware, adminMiddleware, createUser);
+router.get('/users', authMiddleware, adminMiddleware, getUsers);
+router.put('/users/:id', authMiddleware, adminMiddleware, updateUser);
+router.delete('/users/:id', authMiddleware, adminMiddleware, deleteUser);
 
 export default router;

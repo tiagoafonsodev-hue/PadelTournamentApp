@@ -154,6 +154,40 @@ export interface TournamentResult {
   tournament?: Tournament;
 }
 
+export interface UserWithDetails {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  playerId?: string | null;
+  createdAt: string;
+  player?: { id: string; name: string } | null;
+}
+
+export interface AdminStats {
+  totalPlayers: number;
+  tournaments: {
+    created: number;
+    inProgress: number;
+    finished: number;
+  };
+  totalMatchesPlayed: number;
+  recentTournaments: {
+    id: string;
+    name?: string | null;
+    date: string;
+    status: TournamentStatus;
+    category: TournamentCategory;
+    type: TournamentType;
+  }[];
+  topPlayers: {
+    rank: number;
+    id: string;
+    name: string;
+    points: number;
+  }[];
+}
+
 export interface TeamStanding {
   player1Id: string;
   player2Id: string;

@@ -229,6 +229,7 @@ model UserSettings {
   tiebreakerTertiary  String   @default("gamesWon") @map("tiebreaker_tertiary")
   pointsPerWin        Int      @default(2) @map("points_per_win")
   pointsPerDraw       Int      @default(1) @map("points_per_draw")
+  seasonYear          Int      @default(2026) @map("season_year")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 

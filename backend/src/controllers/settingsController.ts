@@ -20,6 +20,7 @@ const tiebreakerSettingsSchema = z.object({
   tertiary: z.string(),
   pointsPerWin: z.number().min(1).max(10),
   pointsPerDraw: z.number().min(0).max(10),
+  seasonYear: z.number().int().min(2020).max(2099).optional(),
 });
 
 /**
@@ -104,6 +105,7 @@ export const getTiebreakerSettings = async (req: AuthRequest, res: Response) => 
         tertiary: 'gamesWon',
         pointsPerWin: 2,
         pointsPerDraw: 1,
+        seasonYear: new Date().getFullYear(),
       });
     }
 
@@ -113,6 +115,7 @@ export const getTiebreakerSettings = async (req: AuthRequest, res: Response) => 
       tertiary: settings.tiebreakerTertiary,
       pointsPerWin: settings.pointsPerWin,
       pointsPerDraw: settings.pointsPerDraw,
+      seasonYear: settings.seasonYear,
     });
   } catch (error) {
     handleError(res, error, 'Settings operation');
@@ -134,6 +137,7 @@ export const saveTiebreakerSettings = async (req: AuthRequest, res: Response) =>
         tiebreakerTertiary: data.tertiary,
         pointsPerWin: data.pointsPerWin,
         pointsPerDraw: data.pointsPerDraw,
+        ...(data.seasonYear !== undefined && { seasonYear: data.seasonYear }),
       },
       create: {
         userId: req.userId!,
@@ -142,6 +146,7 @@ export const saveTiebreakerSettings = async (req: AuthRequest, res: Response) =>
         tiebreakerTertiary: data.tertiary,
         pointsPerWin: data.pointsPerWin,
         pointsPerDraw: data.pointsPerDraw,
+        seasonYear: data.seasonYear ?? new Date().getFullYear(),
       },
     });
 
@@ -151,5 +156,61 @@ export const saveTiebreakerSettings = async (req: AuthRequest, res: Response) =>
       return res.status(400).json({ error: error.errors });
     }
     handleError(res, error, 'Settings operation');
+  }
+};
+
+/**
+ * Admin only: Get overview stats for the admin dashboard
+ */
+export const getAdminStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const [
+      totalPlayers,
+      createdCount,
+      inProgressCount,
+      phase1CompleteCount,
+      phase2CompleteCount,
+      finishedCount,
+      totalMatchesPlayed,
+      recentTournaments,
+      topPlayers,
+    ] = await Promise.all([
+      prisma.player.count(),
+      prisma.tournament.count({ where: { status: 'CREATED' } }),
+      prisma.tournament.count({ where: { status: 'IN_PROGRESS' } }),
+      prisma.tournament.count({ where: { status: 'PHASE_1_COMPLETE' } }),
+      prisma.tournament.count({ where: { status: 'PHASE_2_COMPLETE' } }),
+      prisma.tournament.count({ where: { status: 'FINISHED' } }),
+      prisma.match.count({ where: { status: 'COMPLETED' } }),
+      prisma.tournament.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { id: true, name: true, date: true, status: true, category: true, type: true },
+      }),
+      prisma.player.findMany({
+        take: 3,
+        include: { stats: true },
+        orderBy: { stats: { tournamentPoints: 'desc' } },
+      }),
+    ]);
+
+    res.json({
+      totalPlayers,
+      tournaments: {
+        created: createdCount,
+        inProgress: inProgressCount + phase1CompleteCount + phase2CompleteCount,
+        finished: finishedCount,
+      },
+      totalMatchesPlayed,
+      recentTournaments,
+      topPlayers: topPlayers.map((p, i) => ({
+        rank: i + 1,
+        id: p.id,
+        name: p.name,
+        points: p.stats?.tournamentPoints ?? 0,
+      })),
+    });
+  } catch (error) {
+    handleError(res, error, 'Admin stats');
   }
 };

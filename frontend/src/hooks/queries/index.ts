@@ -5,3 +5,5 @@ export { usePlayers } from './usePlayers';
 export { useLeaderboard } from './useLeaderboard';
 export { usePlayerHistory, type PlayerHistoryResult } from './usePlayerHistory';
 export { usePlayerTrends, type TournamentTrend, type MonthlyTrend } from './usePlayerTrends';
+export { useAdminStats } from './useAdminStats';
+export { useUsers } from './useUsers';

@@ -32,23 +32,22 @@ interface Team {
  * Seed teams based on their combined current-season tournament points
  * Uses snake/zigzag distribution for balanced groups
  */
-async function seedTeamsByPoints(teams: Team[]): Promise<Team[]> {
+async function seedTeamsByPoints(teams: Team[], seasonYear: number): Promise<Team[]> {
   // Get current-season tournament points for all players
   const playerIds = teams.flatMap(t => [t.player1Id, t.player2Id]);
 
-  // Get all tournament results from the current season year for these players
-  const currentYear = new Date().getFullYear();
+  // Get all tournament results from the configured season year for these players
   const tournamentResults = await prisma.tournamentResult.findMany({
     where: {
       playerId: { in: playerIds },
       createdAt: {
-        gte: new Date(currentYear, 0, 1),
-        lt: new Date(currentYear + 1, 0, 1),
+        gte: new Date(seasonYear, 0, 1),
+        lt: new Date(seasonYear + 1, 0, 1),
       },
     },
   });
 
-  logger.info('Team seeding: found tournament results', { count: tournamentResults.length, year: currentYear });
+  logger.info('Team seeding: found tournament results', { count: tournamentResults.length, year: seasonYear });
 
   // Calculate total season points per player
   const playerSeasonPoints = new Map<string, number>();
@@ -121,10 +120,12 @@ export const createTournament = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Ties are not allowed in knockout tournaments' });
     }
 
-    // Reorder teams based on current-season tournament points for balanced group generation
+    // Reorder teams based on configured season year tournament points for balanced group generation
     let seededTeams = data.teams;
     if (data.type === 'GROUP_STAGE_KNOCKOUT') {
-      seededTeams = await seedTeamsByPoints(data.teams);
+      const userSettings = await prisma.userSettings.findUnique({ where: { userId: req.userId! } });
+      const seasonYear = userSettings?.seasonYear ?? new Date().getFullYear();
+      seededTeams = await seedTeamsByPoints(data.teams, seasonYear);
     }
 
     // Create tournament

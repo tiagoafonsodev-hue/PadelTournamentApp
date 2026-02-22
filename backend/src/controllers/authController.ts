@@ -26,6 +26,12 @@ const createUserSchema = z.object({
   playerId: z.string().optional(),
 });
 
+const updateUserSchema = z.object({
+  name: z.string().min(1).optional(),
+  role: z.enum(['ADMIN', 'PLAYER']).optional(),
+  playerId: z.string().nullable().optional(),
+});
+
 // Self-registration (creates PLAYER by default)
 export const register = async (req: Request, res: Response) => {
   try {
@@ -181,6 +187,87 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: error.errors });
     }
     handleError(res, error, 'Create user');
+  }
+};
+
+// Admin: list all users
+export const getUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        playerId: true,
+        createdAt: true,
+        player: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(users);
+  } catch (error) {
+    handleError(res, error, 'Get users');
+  }
+};
+
+// Admin: update user (name, role, playerId)
+export const updateUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = updateUserSchema.parse(req.body);
+
+    // Prevent admin from changing own role
+    if (id === req.userId && data.role !== undefined) {
+      return res.status(400).json({ error: 'Cannot change your own role' });
+    }
+
+    // If linking to a player, verify player exists and isn't already linked to another user
+    if (data.playerId) {
+      const player = await prisma.player.findUnique({
+        where: { id: data.playerId },
+        include: { user: true },
+      });
+      if (!player) {
+        return res.status(400).json({ error: 'Player not found' });
+      }
+      if (player.user && player.user.id !== id) {
+        return res.status(400).json({ error: 'Player already linked to another user' });
+      }
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.role !== undefined && { role: data.role }),
+        ...(data.playerId !== undefined && { playerId: data.playerId }),
+      },
+      select: { id: true, email: true, name: true, role: true, playerId: true, createdAt: true },
+    });
+
+    res.json(user);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    handleError(res, error, 'Update user');
+  }
+};
+
+// Admin: delete user
+export const deleteUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (id === req.userId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    await prisma.user.delete({ where: { id } });
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    handleError(res, error, 'Delete user');
   }
 };
 

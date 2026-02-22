@@ -11,7 +11,7 @@ interface TournamentSummary {
   category: TournamentCategory;
 }
 
-export interface PlayerHistoryResult extends TournamentResult {
+export interface PlayerHistoryResult extends Omit<TournamentResult, 'tournament'> {
   tournament: TournamentSummary;
 }
 

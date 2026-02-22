@@ -6,6 +6,7 @@ import {
   savePointConfiguration,
   getTiebreakerSettings,
   saveTiebreakerSettings,
+  getAdminStats,
 } from '../controllers/settingsController';
 
 const router = Router();
@@ -26,5 +27,8 @@ router.post('/points', savePointConfiguration);
 // Tiebreaker settings
 router.get('/tiebreakers', getTiebreakerSettings);
 router.post('/tiebreakers', saveTiebreakerSettings);
+
+// Admin overview stats
+router.get('/stats', getAdminStats);
 
 export default router;

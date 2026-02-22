@@ -4,3 +4,6 @@ export { useSubmitMatchResult } from './useSubmitMatchResult';
 export { useCreatePlayer } from './useCreatePlayer';
 export { useUpdatePlayer } from './useUpdatePlayer';
 export { useDeletePlayer } from './useDeletePlayer';
+export { useCreateUser } from './useCreateUser';
+export { useUpdateUser } from './useUpdateUser';
+export { useDeleteUser } from './useDeleteUser';
